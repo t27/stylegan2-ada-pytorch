@@ -1,5 +1,6 @@
 __pycache__/
 .cache/
-out
+out*
 pretrained
 .vscode
+**/.ipynb_checkpoints
