@@ -111,7 +111,7 @@ def project(
                 if noise.shape[2] <= 8:
                     break
                 noise = F.avg_pool2d(noise, kernel_size=2)
-        loss = dist + reg_loss * regularize_noise_weight
+        loss = dist + reg_loss * regularize_noise_weight ## Add MSELOSS(target,synth) here? or use HW5 code?
 
         # Step
         optimizer.zero_grad(set_to_none=True)

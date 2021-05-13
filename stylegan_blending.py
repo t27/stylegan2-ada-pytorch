@@ -45,9 +45,11 @@ def get_conv_names(model, max_dim=1024):
     return conv_names
 
 
-def get_blended_model(G1, G2, resolution, level, blend_width=None, verbose=False):
-    model1_names = get_conv_names(G1, 512)
-    model2_names = get_conv_names(G2, 512)
+def get_blended_model(
+    G1, G2, resolution, level, blend_width=None, network_size=512, verbose=False
+):
+    model1_names = get_conv_names(G1, network_size)
+    model2_names = get_conv_names(G2, network_size)
     assert all((x == y for x, y in zip(model1_names, model2_names)))
 
     output_model = copy.deepcopy(G1)
@@ -72,7 +74,7 @@ def get_blended_model(G1, G2, resolution, level, blend_width=None, verbose=False
 
     new_model_state_dict = output_model.state_dict()
     for name, y in zip(full_names, ys):
-        new_model_state_dict[name] = G2.state_dict()[name] * y + G2.state_dict()[
+        new_model_state_dict[name] = G2.state_dict()[name] * y + G1.state_dict()[
             name
         ] * (1 - y)
     output_model.load_state_dict(new_model_state_dict)
@@ -91,11 +93,12 @@ def get_image(model, z, label=0, truncation_psi=0.7, noise_mode="const"):
 def run_blend_images(
     network_pkl1: str,
     network_pkl2: str,
-    seeds: Optional[List[int]] = [700, 701, 702],
+    seeds: Optional[List[int]] = [700, 701, 702, 703, 704, 705, 706, 707],
     outdir: str = "./out_blend",
     truncation_psi: float = 0.7,
     noise_mode: str = "const",
-    blending_layers: List[int] = [4, 8, 256, 512],
+    blending_layers: List[int] = [4, 8, 16, 32, 64, 128, 256],
+    network_size: int = 512,
     verbose: bool = False,
 ):
     """Generate images using pretrained network pickle.
@@ -112,33 +115,75 @@ def run_blend_images(
         G1 = legacy.load_network_pkl(f)["G_ema"].to(device)  # type: ignore
     with dnnlib.util.open_url(network_pkl2) as f:
         G2 = legacy.load_network_pkl(f)["G_ema"].to(device)  # type: ignore
-
+    # print("G1", G1)
+    # print("G2", G2)
     os.makedirs(outdir, exist_ok=True)
 
     blend_width = (
-        0.9  # # None = hard switch, float = smooth switch (logistic) with given width
+        None  # # None = hard switch, float = smooth switch (logistic) with given width
     )
-    level = 1
-
+    level = 0
+    images = []
+    blended_models = {}
     for blending_layer in blending_layers:
         resolution = f"b{blending_layer}"  # blend at layer
 
         blended_model = get_blended_model(
-            G1, G2, resolution, level, blend_width, verbose=verbose
+            G1,
+            G2,
+            resolution,
+            level,
+            blend_width,
+            network_size=network_size,
+            verbose=verbose,
         )
 
+        blended_models[blending_layer] = blended_model
+
         # seed = 279
-        for seed in seeds:
-            z_vector = z = torch.from_numpy(
-                np.random.RandomState(seed).randn(1, G1.z_dim)
-            ).to(device)
-            orig1 = get_image(G1, z_vector)
-            orig2 = get_image(G2, z_vector)
-            blended = get_image(blended_model, z_vector)
+    for seed in seeds:
+        images = []
+        z_vector = z = torch.from_numpy(
+            np.random.RandomState(seed).randn(1, G1.z_dim)
+        ).to(device)
+        orig1 = get_image(
+            G1, z_vector, truncation_psi=truncation_psi, noise_mode=noise_mode
+        )
+        orig2 = get_image(
+            G2, z_vector, truncation_psi=truncation_psi, noise_mode=noise_mode
+        )
+        orig1.save(f"{outdir}/seed_{seed}_G1.png")
+        orig2.save(f"{outdir}/seed_{seed}_G2.png")
+        images.append(orig1)
+        images.append(orig2)
+        for blending_layer in blending_layers:
+            blended_model = blended_models[blending_layer]
+            blended = get_image(
+                blended_model,
+                z_vector,
+                truncation_psi=truncation_psi,
+                noise_mode=noise_mode,
+            )
             fprefix = f"seed_{seed}_layer_{resolution}"
-            orig1.save(f"{outdir}/seed_{seed}_G1.png")
-            orig2.save(f"{outdir}/seed_{seed}_G2.png")
             blended.save(f"{outdir}/{fprefix}_blended.png")
+            images.append(blended)
+
+        make_and_save_grid(images, f"{outdir}/{seed}_finalgrid.png")
+
+
+def make_and_save_grid(images, destpath):
+    W, H = images[0].size
+    IMG_MARGIN = 3
+    new_im = PIL.Image.new(
+        "RGB", ((W + IMG_MARGIN * 2) * len(images), H + IMG_MARGIN * 2)
+    )
+
+    x_offset = IMG_MARGIN
+    for im in images:
+        new_im.paste(im, (x_offset, IMG_MARGIN))
+        x_offset += im.size[0] + IMG_MARGIN * 2
+
+    new_im.save(destpath)
 
 
 @click.command()
@@ -151,6 +196,9 @@ def run_blend_images(
 )
 @click.option("--seeds", type=num_range, help="List of random seeds")
 @click.option(
+    "--dim", "network_size", type=int, help="Network max dimension", default=512
+)
+@click.option(
     "--trunc",
     "truncation_psi",
     type=float,
@@ -159,19 +207,12 @@ def run_blend_images(
     show_default=True,
 )
 @click.option(
-    "--class",
-    "class_idx",
-    type=int,
-    help="Class label (unconditional if not specified)",
-)
-@click.option(
     "--noise-mode",
     help="Noise mode",
     type=click.Choice(["const", "random", "none"]),
     default="const",
     show_default=True,
 )
-@click.option("--projected-w", help="Projection result file", type=str, metavar="FILE")
 @click.option(
     "--outdir",
     help="Where to save the output images",
@@ -195,92 +236,27 @@ def generate_images(
     truncation_psi: float,
     noise_mode: str,
     outdir: str,
-    class_idx: Optional[int],
-    projected_w: Optional[str],
+    network_size: int,
     verbose: bool,
 ):
-    """Generate images using pretrained network pickle.
-
+    """Run blending experiments using 2 input models using multiple seeds and blending layers
+    IMPORTANT: The 2nd model should be transfer learned from the first for the best results
     Examples:
-    # Generate curated MetFaces images without truncation (Fig.10 left)
-    python generate.py --outdir=out --trunc=1 --seeds=85,265,297,849 \\
-        --network=https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/metfaces.pkl
+    python stylegan_blending.py --network1 pretrained/ffhq-res256-mirror-paper256-noaug.pkl \
+        --network2 00004-afhqcat256-mirror-auto2-resumeffhq256/network-snapshot-000560.pkl \
+            --outdir out_custom --dim 256
     """
     if seeds is None:
         seeds = [701, 702, 703]
     run_blend_images(
-        network_pkl1, network_pkl2, seeds, outdir, truncation_psi, noise_mode
+        network_pkl1,
+        network_pkl2,
+        seeds,
+        outdir,
+        truncation_psi,
+        noise_mode,
+        network_size=network_size,
     )
-    # print(f"Loading networks from {network_pkl1} and {network_pkl2} ...")
-    # device = torch.device("cuda")
-    # with dnnlib.util.open_url(network_pkl1) as f:
-    #     G1 = legacy.load_network_pkl(f)["G_ema"].to(device)  # type: ignore
-    # with dnnlib.util.open_url(network_pkl2) as f:
-    #     G2 = legacy.load_network_pkl(f)["G_ema"].to(device)  # type: ignore
-
-    # os.makedirs(outdir, exist_ok=True)
-
-    # # Hyperparams
-    # BLENDING_LAYER = "b64"  # anything from b4 to b512 (doubles)
-    # blend_width = (
-    #     None  # # None = hard switch, float = smooth switch (logistic) with given width
-    # )
-    # resolution = BLENDING_LAYER  # blend at layer
-    # level = 0
-    # verbose = True
-
-    # blended_model = get_blended_model(
-    #     G1, G2, resolution, level, blend_width, verbose=True
-    # )
-
-    # seed = 279
-    # z_vector = z = torch.from_numpy(np.random.RandomState(seed).randn(1, G1.z_dim)).to(
-    #     device
-    # )
-    # orig1 = get_image(G1, z_vector)
-    # orig2 = get_image(G2, z_vector)
-    # blended = get_image(blended_model, z_vector)
-
-    # # Synthesize the result of a W projection.
-    # if projected_w is not None:
-    #     if seeds is not None:
-    #         print("warn: --seeds is ignored when using --projected-w")
-    #     print(f'Generating images from projected W "{projected_w}"')
-    #     ws = np.load(projected_w)["w"]
-    #     ws = torch.tensor(ws, device=device)  # pylint: disable=not-callable
-    #     assert ws.shape[1:] == (G.num_ws, G.w_dim)
-    #     for idx, w in enumerate(ws):
-    #         img = G.synthesis(w.unsqueeze(0), noise_mode=noise_mode)
-    #         img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
-    #         img = PIL.Image.fromarray(img[0].cpu().numpy(), "RGB").save(
-    #             f"{outdir}/proj{idx:02d}.png"
-    #         )
-    #     return
-
-    # if seeds is None:
-    #     ctx.fail("--seeds option is required when not using --projected-w")
-
-    # # Labels.
-    # label = torch.zeros([1, G.c_dim], device=device)
-    # if G.c_dim != 0:
-    #     if class_idx is None:
-    #         ctx.fail(
-    #             "Must specify class label with --class when using a conditional network"
-    #         )
-    #     label[:, class_idx] = 1
-    # else:
-    #     if class_idx is not None:
-    #         print("warn: --class=lbl ignored when running on an unconditional network")
-
-    # # Generate images.
-    # for seed_idx, seed in enumerate(seeds):
-    #     print("Generating image for seed %d (%d/%d) ..." % (seed, seed_idx, len(seeds)))
-    #     z = torch.from_numpy(np.random.RandomState(seed).randn(1, G.z_dim)).to(device)
-    #     img = G(z, label, truncation_psi=truncation_psi, noise_mode=noise_mode)
-    #     img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
-    #     PIL.Image.fromarray(img[0].cpu().numpy(), "RGB").save(
-    #         f"{outdir}/seed{seed:04d}.png"
-    #     )
 
 
 # ----------------------------------------------------------------------------
