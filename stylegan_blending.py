@@ -247,7 +247,7 @@ def generate_images(
             --outdir out_custom --dim 256
     """
     if seeds is None:
-        seeds = [701, 702, 703]
+        seeds = list(range(700, 710)) + list(range(900, 910))
     run_blend_images(
         network_pkl1,
         network_pkl2,

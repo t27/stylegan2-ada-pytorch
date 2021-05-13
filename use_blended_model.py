@@ -123,6 +123,7 @@ def main(
     device = "cuda"
     # Take input image
     # Get embedding for the image after K iterations on G1 (K=500?)
+    # TODO. may be use a projector NN that approximates the transform and use that vector as initialization and only do 20 steps instead of 500
     # Use the embedding and run it through both the initial and blended model
 
     input_image_name, ext = os.path.splitext((os.path.split(input_image)[-1]))
@@ -163,14 +164,36 @@ def main(
     blended_img_pil = PIL.Image.fromarray(blended_img, "RGB")
     blended_img_pil.save(f"{outdir}/{input_image_name}_blended{ext}")
 
-    video = imageio.get_writer(f'{outdir}/proj_blended.mp4', mode='I', fps=10, codec='libx264', bitrate='16M')
-    print (f'Saving optimization progress video "{outdir}/proj_blended.mp4"')
+    video = imageio.get_writer(
+        f"{outdir}/proj_blended.mp4", mode="I", fps=10, codec="libx264", bitrate="16M"
+    )
+    print(f'Saving optimization progress video "{outdir}/proj_blended.mp4"')
     for projected_w in w_plus:
-        synth_image = blended_model.synthesis(projected_w.unsqueeze(0), noise_mode='const')
-        synth_image = (synth_image + 1) * (255/2)
-        synth_image = synth_image.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
-        video.append_data(np.concatenate([target_uint8, synth_image], axis=1))
+        unblended_image = G1.synthesis(projected_w.unsqueeze(0), noise_mode="const")
+        unblended_image = (unblended_image + 1) * (255 / 2)
+        unblended_image = (
+            unblended_image.permute(0, 2, 3, 1)
+            .clamp(0, 255)
+            .to(torch.uint8)[0]
+            .cpu()
+            .numpy()
+        )
+        synth_image = blended_model.synthesis(
+            projected_w.unsqueeze(0), noise_mode="const"
+        )
+        synth_image = (synth_image + 1) * (255 / 2)
+        synth_image = (
+            synth_image.permute(0, 2, 3, 1)
+            .clamp(0, 255)
+            .to(torch.uint8)[0]
+            .cpu()
+            .numpy()
+        )
+        video.append_data(
+            np.concatenate([target_uint8, unblended_image, synth_image], axis=1)
+        )
     video.close()
+
 
 if __name__ == "__main__":
     main()
