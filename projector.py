@@ -22,6 +22,96 @@ import torch.nn.functional as F
 import dnnlib
 import legacy
 
+# ----------------------------------------------------------------------------
+
+# Reference: https://github.com/PDillis/stylegan2-ada-pytorch/blob/dab4f40a4ec1031b55f2c4b8e59e530bd47e2cd1/projector.py
+
+class VGG16FeaturesNVIDIA(torch.nn.Module):
+    def __init__(self, vgg16):
+        super(VGG16FeaturesNVIDIA, self).__init__()
+        # ReLU is already included in the output of every conv output
+        self.conv1_1 = vgg16.layers.conv1
+        self.conv1_2 = vgg16.layers.conv2
+        self.pool1 = vgg16.layers.pool1
+
+        self.conv2_1 = vgg16.layers.conv3
+        self.conv2_2 = vgg16.layers.conv4
+        self.pool2 = vgg16.layers.pool2
+
+        self.conv3_1 = vgg16.layers.conv5
+        self.conv3_2 = vgg16.layers.conv6
+        self.conv3_3 = vgg16.layers.conv7
+        self.pool3 = vgg16.layers.pool3
+
+        self.conv4_1 = vgg16.layers.conv8
+        self.conv4_2 = vgg16.layers.conv9
+        self.conv4_3 = vgg16.layers.conv10
+        self.pool4 = vgg16.layers.pool4
+
+        self.conv5_1 = vgg16.layers.conv11
+        self.conv5_2 = vgg16.layers.conv12
+        self.conv5_3 = vgg16.layers.conv13
+        self.pool5 = vgg16.layers.pool5
+        self.adavgpool = torch.nn.AdaptiveAvgPool2d(output_size=(7, 7))  # We need this for 256x256 images (> 224x224)
+
+        self.fc1 = vgg16.layers.fc1
+        self.fc2 = vgg16.layers.fc2
+        self.fc3 = vgg16.layers.fc3
+        self.softmax = vgg16.layers.softmax
+
+    def forward(self, x, layers, normed = True):
+        """
+        x is an image/tensor of shape [1, 3, 256, 256], and layers is a list of the names of the layers you wish
+        to return in order to compare the activations with another image.
+        Example:
+            device = 'cuda' if torch.cuda.is_available() else 'cpu'
+            img1 = torch.randn(1, 3, 256, 256, device=device)
+            img2 = torch.randn(1, 3, 256, 256, device=device)
+            layers = ['conv1_1', 'conv1_2', 'conv3_3', 'conv3_3', 'fc3']  # Indeed, return twice conv3_3
+            vgg16 = VGG16FeaturesNVIDIA(device=device)
+            # Get the desired features from the layers list
+            features1 = vgg16(img1, layers)
+            features2 = vgg16(img2, layers)
+            # Get, e.g., the MSE loss between the two features
+            mse = torch.nn.MSELoss(reduction='mean')
+            loss = sum(map(lambda x, y: mse(x, y), features1, features2))
+        """
+        # Legend: => conv2d, -> max pool 2d, ~> adaptive average pool 2d, ->> fc layer; shapes of input/output are shown
+        assert layers is not None
+        conv1_1 = self.conv1_1(x)                         # [1, 3, 256, 256] => [1, 64, 256, 256]
+        conv1_2 = self.conv1_2(conv1_1)                   # [1, 64, 256, 256] => [1, 64, 256, 256]
+
+        conv2_1 = self.conv2_1(self.pool1(conv1_2))       # [1, 64, 256, 256] -> [1, 64, 128, 128] => [1, 128, 128, 128]
+        conv2_2 = self.conv2_2(conv2_1)                   # [1, 128, 128, 128] => [1, 128, 128, 128]
+
+        conv3_1 = self.conv3_1(self.pool2(conv2_2))       # [1, 128, 128, 128] -> [1, 128, 64, 64] => [1, 256, 64, 64]
+        conv3_2 = self.conv3_2(conv3_1)                   # [1, 256, 64, 64] => [1, 256, 64, 64]
+        conv3_3 = self.conv3_3(conv3_2)                   # [1, 256, 64, 64] => [1, 256, 64, 64]
+
+        conv4_1 = self.conv4_1(self.pool3(conv3_3))       # [1, 256, 64, 64] -> [1, 256, 32, 32] => [1, 512, 32, 32]
+        conv4_2 = self.conv4_2(conv4_1)                   # [1, 512, 32, 32] => [1, 512, 32, 32]
+        conv4_3 = self.conv4_3(conv4_2)                   # [1, 512, 32, 32] => [1, 512, 32, 32]
+
+        conv5_1 = self.conv5_1(self.pool4(conv4_3))       # [1, 512, 32, 32] -> [1, 512, 16, 16] => [1, 512, 16, 16]
+        conv5_2 = self.conv5_2(conv5_1)                   # [1, 512, 16, 16] => [1, 512, 16, 16]
+        conv5_3 = self.conv5_3(conv5_2)                   # [1, 512, 16, 16] => [1, 512, 16, 16]
+
+        adavgpool = self.adavgpool(self.pool5(conv5_3))   # [1, 512, 16, 16] -> [1, 512, 8, 8] ~> [1, 512, 7, 7]
+        fc1 = self.fc1(adavgpool)                         # [1, 512, 7, 7] ->> [1, 4096]; w/ReLU
+        fc2 = self.fc2(fc1)                               # [1, 4096] ->> [1, 4096]; w/ReLU
+        fc3 = self.softmax(self.fc3(fc2))                 # [1, 4096] ->> [1, 1000]; w/o ReLU; apply softmax
+
+        result_list = list()
+        for layer in layers:
+            if normed:
+                result_list.append(eval(layer) / torch.numel(eval(layer)))
+            else:
+                result_list.append(eval(layer))
+        return result_list
+
+
+# ----------------------------------------------------------------------------
+
 def project(
     G,
     target: torch.Tensor, # [C,H,W] and dynamic range [0,255], W & H must match G output resolution
@@ -48,9 +138,9 @@ def project(
     # Compute w stats.
     logprint(f'Computing W midpoint and stddev using {w_avg_samples} samples...')
     z_samples = np.random.RandomState(123).randn(w_avg_samples, G.z_dim)
-    w_samples = G.mapping(torch.from_numpy(z_samples).to(device), None)  # [N, L, C]
-    w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)       # [N, 1, C]
-    w_avg = np.mean(w_samples, axis=0, keepdims=True)      # [1, 1, C]
+    w_samples = G.mapping(torch.from_numpy(z_samples).to(device), None)  # [N, L, C]    # from_mean = True
+    w_samples = w_samples.cpu().numpy().astype(np.float32)       # [N, 1, C]
+    w_avg = np.mean(w_samples, axis=0, keepdims=True)      # [1, L, C]
     w_std = (np.sum((w_samples - w_avg) ** 2) / w_avg_samples) ** 0.5
 
     # Setup noise inputs.
@@ -61,11 +151,17 @@ def project(
     with dnnlib.util.open_url(url) as f:
         vgg16 = torch.jit.load(f).eval().to(device)
 
+    vgg16_features = VGG16FeaturesNVIDIA(vgg16)
+
     # Features for target image.
     target_images = target.unsqueeze(0).to(device).to(torch.float32)
     if target_images.shape[2] > 256:
         target_images = F.interpolate(target_images, size=(256, 256), mode='area')
     target_features = vgg16(target_images, resize_images=False, return_lpips=True)
+    # This is too cumbersome to add as command-line input, so we leave it here; use whatever you need
+    # layers = [ 'conv3_1', 'conv3_2', 'conv3_3', 'conv4_1', 'conv4_2',
+    #             'conv4_3', 'conv5_1', 'conv5_2', 'conv5_3']
+    # target_features = vgg16_features(target_images, layers)
 
     w_opt = torch.tensor(w_avg, dtype=torch.float32, device=device, requires_grad=True) # pylint: disable=not-callable
     w_out = torch.zeros([num_steps] + list(w_opt.shape[1:]), dtype=torch.float32, device=device)
@@ -89,7 +185,7 @@ def project(
 
         # Synth images from opt_w.
         w_noise = torch.randn_like(w_opt) * w_noise_scale
-        ws = (w_opt + w_noise).repeat([1, G.mapping.num_ws, 1])
+        ws = (w_opt + w_noise) #.repeat([1, G.mapping.num_ws, 1])
         synth_images = G.synthesis(ws, noise_mode='const')
 
         # Downsample image to 256x256 if it's larger than that. VGG was built for 224x224 images.
@@ -99,6 +195,9 @@ def project(
 
         # Features for synth images.
         synth_features = vgg16(synth_images, resize_images=False, return_lpips=True)
+        # synth_features = vgg16_features(synth_images, layers)
+        mse = torch.nn.MSELoss(reduction='mean')
+        # dist = sum(map(lambda x, y: mse(x, y), target_features, synth_features))
         dist = (target_features - synth_features).square().sum()
 
         # Noise regularization.
@@ -111,7 +210,7 @@ def project(
                 if noise.shape[2] <= 8:
                     break
                 noise = F.avg_pool2d(noise, kernel_size=2)
-        loss = dist + reg_loss * regularize_noise_weight ## Add MSELOSS(target,synth) here? or use HW5 code?
+        loss = dist + reg_loss * regularize_noise_weight #F.mse_loss(target_images, synth_images) ## Add MSELOSS(target,synth) here? or use HW5 code?
 
         # Step
         optimizer.zero_grad(set_to_none=True)
@@ -128,7 +227,7 @@ def project(
                 buf -= buf.mean()
                 buf *= buf.square().mean().rsqrt()
 
-    return w_out.repeat([1, G.mapping.num_ws, 1])
+    return w_out #.repeat([1, G.mapping.num_ws, 1])
 
 #----------------------------------------------------------------------------
 

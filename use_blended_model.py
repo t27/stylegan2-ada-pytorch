@@ -15,6 +15,8 @@ import legacy
 from stylegan_blending import get_blended_model
 from projector import project
 
+import imageio
+
 
 def blend_model(
     network_pkl1: str,
@@ -74,7 +76,7 @@ def blend_model(
     "blend_layer",
     type=int,
     help="Layer at which we should blend at",
-    default=16,
+    default=32,
 )
 @click.option(
     "--trunc",
@@ -107,6 +109,7 @@ def blend_model(
     show_default=True,
 )
 def main(
+    ctx: click.Context,
     network_pkl1: str,
     network_pkl2: str,
     network_size: int,
@@ -140,22 +143,34 @@ def main(
     target_torch = torch.tensor(target_uint8.transpose([2, 0, 1]), device=device)
 
     # since the project function returns all the w's, we only want the last one
-    w_plus = project(G1, target_torch, num_steps=500)[-1]
+    w_plus = project(G1, target_torch, num_steps=500, device=device, verbose=True)
 
     # generate and save the normal image
-    normal_img = G1.synthesis(w_plus.unsqueeze(0), noise_mode="const")
+    normal_img = G1.synthesis(w_plus[-1].unsqueeze(0), noise_mode="const")
     normal_img = (normal_img + 1) * (255 / 2)
     normal_img = (
         normal_img.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
     )
     normal_img_pil = PIL.Image.fromarray(normal_img, "RGB")
-    normal_img_pil.save(f"{outdir}/{input_image_name}_synthesized.{ext}")
+    normal_img_pil.save(f"{outdir}/{input_image_name}_synthesized{ext}")
 
     # generate and save the blended image
-    blended_img = blended_model.synthesis(w_plus.unsqueeze(0), noise_mode="const")
+    blended_img = blended_model.synthesis(w_plus[-1].unsqueeze(0), noise_mode="const")
     blended_img = (blended_img + 1) * (255 / 2)
     blended_img = (
         blended_img.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
     )
     blended_img_pil = PIL.Image.fromarray(blended_img, "RGB")
-    blended_img_pil.save(f"{outdir}/{input_image_name}_blended.{ext}")
+    blended_img_pil.save(f"{outdir}/{input_image_name}_blended{ext}")
+
+    video = imageio.get_writer(f'{outdir}/proj_blended.mp4', mode='I', fps=10, codec='libx264', bitrate='16M')
+    print (f'Saving optimization progress video "{outdir}/proj_blended.mp4"')
+    for projected_w in w_plus:
+        synth_image = blended_model.synthesis(projected_w.unsqueeze(0), noise_mode='const')
+        synth_image = (synth_image + 1) * (255/2)
+        synth_image = synth_image.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
+        video.append_data(np.concatenate([target_uint8, synth_image], axis=1))
+    video.close()
+
+if __name__ == "__main__":
+    main()
