@@ -1,3 +1,34 @@
+# StyleGAN Blending for faces, cats, dogs, wildlife and cartoons.
+
+### Tarang Shah(@t27), Rohan Rao(@themathgeek13)
+
+This repository implements StyleGAN blending as proposed by [Justin Pinkney and Doron Adler](https://arxiv.org/abs/2010.05334) and includes various experiments and code for analysing and comparing blended models.
+
+This project was done as part of a course we took at CMU - https://learning-image-synthesis.github.io/ in Spring 2021
+
+## Contributions
+
+- We add a better projection routine for projecting natural images to the StyleGAN2 latent space(inspired from [Abdal et al](https://arxiv.org/abs/1904.03189))
+- Pytorch implementation for blending models(`stylegan_blending.py`). 
+- We also add a "forward" pass implementation which takes an input image, projects it to the latent space and runs it through the blended model(`use_blended_model.py`).
+- We provide models trained on [AFHQCATs, AFHQDOGs, AFHQWILD](https://github.com/clovaai/stargan-v2#animal-faces-hq-dataset-afhq) and [Google Cartoon](https://google.github.io/cartoonset/). These models are trained at 256x256 using transfer learning from the base FFHQ 256x256 model provided originally by NVIDIA
+
+## Intructions and Documentation
+
+To set up the python environment and dependencies for this, follow the StyleGAN2 instructions below. 
+
+To be added soon
+- instructions for downloading ipynb_checkpoints
+- sample commands for stylegan_blending and use_blended_model (you can refer to the `run_experiments` scripts, both `py` and `sh`. Also we use `click` for the args similar to the parent StyleGAN repo, which should provide some help if you run `python scripy.py -h`)
+- visual results and tips on hyperparameters
+
+
+
+
+
+
+
+------------------------------------------------------------
 ## StyleGAN2-ADA &mdash; Official PyTorch implementation
 
 ![Teaser image](./docs/stylegan2-ada-teaser-1024x252.png)
