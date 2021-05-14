@@ -108,6 +108,9 @@ def blend_model(
     default=False,
     show_default=True,
 )
+@click.option(
+    "--blend_width", "blend_width", type=float, help="Blend width(0-1)", default=None,
+)
 def main(
     ctx: click.Context,
     network_pkl1: str,
@@ -118,6 +121,7 @@ def main(
     truncation_psi: float,
     noise_mode: str,
     outdir: str,
+    blend_width: str,
     verbose: bool,
 ):
     device = "cuda"
@@ -125,11 +129,15 @@ def main(
     # Get embedding for the image after K iterations on G1 (K=500?)
     # TODO. may be use a projector NN that approximates the transform and use that vector as initialization and only do 20 steps instead of 500
     # Use the embedding and run it through both the initial and blended model
-
+    os.makedirs(outdir, exist_ok=True)
     input_image_name, ext = os.path.splitext((os.path.split(input_image)[-1]))
 
     blended_model, G1 = blend_model(
-        network_pkl1, network_pkl2, resolution=blend_layer, network_size=network_size
+        network_pkl1,
+        network_pkl2,
+        resolution=blend_layer,
+        network_size=network_size,
+        blend_width=blend_width,
     )
     target_pil = PIL.Image.open(input_image).convert("RGB")
     w, h = target_pil.size
@@ -145,7 +153,7 @@ def main(
 
     # since the project function returns all the w's, we only want the last one
     w_plus = project(G1, target_torch, num_steps=500, device=device, verbose=True)
-
+    np.savez(f"{outdir}/projected_w.npz", w=w_plus.unsqueeze(0).cpu().numpy())
     # generate and save the normal image
     normal_img = G1.synthesis(w_plus[-1].unsqueeze(0), noise_mode="const")
     normal_img = (normal_img + 1) * (255 / 2)

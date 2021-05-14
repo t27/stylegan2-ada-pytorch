@@ -82,12 +82,24 @@ def get_blended_model(
     return output_model
 
 
-def get_image(model, z, label=0, truncation_psi=0.7, noise_mode="const"):
-    img = model(z, label, truncation_psi=truncation_psi, noise_mode=noise_mode)
+def get_image(
+    model, z, label=0, truncation_psi=0.7, noise_mode="const", w=None, is_w=False
+):
+    if is_w:
+        img = model.synthesis(w.unsqueeze(0), noise_mode=noise_mode)
+    else:
+        img = model(z, label, truncation_psi=truncation_psi, noise_mode=noise_mode)
     img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
     imgfile = PIL.Image.fromarray(img[0].cpu().numpy(), "RGB")
     return imgfile
-    # imgfile.save(f"Blended_seed{seed:04d}.png")
+
+
+# def get_image(model, z, label=0, truncation_psi=0.7, noise_mode="const"):
+#     img = model(z, label, truncation_psi=truncation_psi, noise_mode=noise_mode)
+#     img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+#     imgfile = PIL.Image.fromarray(img[0].cpu().numpy(), "RGB")
+#     return imgfile
+# imgfile.save(f"Blended_seed{seed:04d}.png")
 
 
 def run_blend_images(
@@ -99,7 +111,9 @@ def run_blend_images(
     noise_mode: str = "const",
     blending_layers: List[int] = [4, 8, 16, 32, 64, 128, 256],
     network_size: int = 512,
+    blend_width: float = None,
     verbose: bool = False,
+    projected_w: Optional[str] = None,
 ):
     """Generate images using pretrained network pickle.
 
@@ -119,9 +133,9 @@ def run_blend_images(
     # print("G2", G2)
     os.makedirs(outdir, exist_ok=True)
 
-    blend_width = (
-        None  # # None = hard switch, float = smooth switch (logistic) with given width
-    )
+    # blend_width = (
+    #     None  # # None = hard switch, float = smooth switch (logistic) with given width
+    # )
     level = 0
     images = []
     blended_models = {}
@@ -140,35 +154,86 @@ def run_blend_images(
 
         blended_models[blending_layer] = blended_model
 
-        # seed = 279
-    for seed in seeds:
+    w_filename = os.path.splitext(os.path.split(projected_w)[-1])[0]
+    name = w_filename.split("_")[0]
+
+    if projected_w is not None:
+        if seeds is not None:
+            print("warn: --seeds is ignored when using --projected-w")
+        print(f'Generating images from projected W "{projected_w}"')
+        ws = np.load(projected_w)["w"]
+        ws = torch.tensor(ws, device=device).squeeze(0)  # pylint: disable=not-callable
+        print(ws.shape, (G1.num_ws, G1.w_dim))
+        assert ws.shape[1:] == (G1.num_ws, G1.w_dim)
+        # for idx, w in enumerate(ws):
         images = []
-        z_vector = z = torch.from_numpy(
-            np.random.RandomState(seed).randn(1, G1.z_dim)
-        ).to(device)
+        w = ws[-1]
         orig1 = get_image(
-            G1, z_vector, truncation_psi=truncation_psi, noise_mode=noise_mode
+            G1,
+            None,
+            truncation_psi=truncation_psi,
+            noise_mode=noise_mode,
+            w=w,
+            is_w=True,
         )
         orig2 = get_image(
-            G2, z_vector, truncation_psi=truncation_psi, noise_mode=noise_mode
+            G2,
+            None,
+            truncation_psi=truncation_psi,
+            noise_mode=noise_mode,
+            w=w,
+            is_w=True,
         )
-        orig1.save(f"{outdir}/seed_{seed}_G1.png")
-        orig2.save(f"{outdir}/seed_{seed}_G2.png")
+        orig1.save(f"{outdir}/seed_{name}_G1.png")
+        orig2.save(f"{outdir}/seed_{name}_G2.png")
         images.append(orig1)
         images.append(orig2)
         for blending_layer in blending_layers:
             blended_model = blended_models[blending_layer]
             blended = get_image(
                 blended_model,
-                z_vector,
+                None,
                 truncation_psi=truncation_psi,
                 noise_mode=noise_mode,
+                w=w,
+                is_w=True,
             )
-            fprefix = f"seed_{seed}_layer_{resolution}"
+            fprefix = f"seed_{name}_layer_{resolution}"
             blended.save(f"{outdir}/{fprefix}_blended.png")
             images.append(blended)
 
-        make_and_save_grid(images, f"{outdir}/{seed}_finalgrid.png")
+        make_and_save_grid(images, f"{outdir}/{name}_finalgrid.png")
+        return
+    else:
+        # seed = 279
+        for seed in seeds:
+            images = []
+            z_vector = z = torch.from_numpy(
+                np.random.RandomState(seed).randn(1, G1.z_dim)
+            ).to(device)
+            orig1 = get_image(
+                G1, z_vector, truncation_psi=truncation_psi, noise_mode=noise_mode
+            )
+            orig2 = get_image(
+                G2, z_vector, truncation_psi=truncation_psi, noise_mode=noise_mode
+            )
+            orig1.save(f"{outdir}/seed_{seed}_G1.png")
+            orig2.save(f"{outdir}/seed_{seed}_G2.png")
+            images.append(orig1)
+            images.append(orig2)
+            for blending_layer in blending_layers:
+                blended_model = blended_models[blending_layer]
+                blended = get_image(
+                    blended_model,
+                    z_vector,
+                    truncation_psi=truncation_psi,
+                    noise_mode=noise_mode,
+                )
+                fprefix = f"seed_{seed}_layer_{resolution}"
+                blended.save(f"{outdir}/{fprefix}_blended.png")
+                images.append(blended)
+
+            make_and_save_grid(images, f"{outdir}/{seed}_finalgrid.png")
 
 
 def make_and_save_grid(images, destpath):
@@ -198,6 +263,10 @@ def make_and_save_grid(images, destpath):
 @click.option(
     "--dim", "network_size", type=int, help="Network max dimension", default=512
 )
+@click.option(
+    "--blend_width", "blend_width", type=float, help="Blend width(0-1)", default=None,
+)
+@click.option("--projected_w", "projected_w", help="Project w filename")
 @click.option(
     "--trunc",
     "truncation_psi",
@@ -237,7 +306,9 @@ def generate_images(
     noise_mode: str,
     outdir: str,
     network_size: int,
+    blend_width: float,
     verbose: bool,
+    projected_w: Optional[str],
 ):
     """Run blending experiments using 2 input models using multiple seeds and blending layers
     IMPORTANT: The 2nd model should be transfer learned from the first for the best results
@@ -256,6 +327,8 @@ def generate_images(
         truncation_psi,
         noise_mode,
         network_size=network_size,
+        blend_width=blend_width,
+        projected_w=projected_w,
     )
 
 
