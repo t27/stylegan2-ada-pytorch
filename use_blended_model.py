@@ -37,9 +37,9 @@ def blend_model(
     print(f"Loading networks from {network_pkl1} and {network_pkl2} ...")
     device = torch.device("cuda")
     with dnnlib.util.open_url(network_pkl1) as f:
-        G1 = legacy.load_network_pkl(f)["G_ema"].to(device)  # type: ignore
+        G1 = legacy.load_network_pkl(f)["G_ema"].to(device).eval()  # type: ignore
     with dnnlib.util.open_url(network_pkl2) as f:
-        G2 = legacy.load_network_pkl(f)["G_ema"].to(device)  # type: ignore
+        G2 = legacy.load_network_pkl(f)["G_ema"].to(device).eval()  # type: ignore
     # None = hard switch, float = smooth switch (logistic) with given width
     blend_width = None
     level = 0
@@ -57,7 +57,8 @@ def blend_model(
     return blended_model, G1
 
 
-def project_image(input_image, G1, device, pil=False):
+def get_target_transformed_img(input_image, res=256, pil=False):
+
     if not pil:
         target_pil = PIL.Image.open(input_image).convert("RGB")
     else:
@@ -67,14 +68,17 @@ def project_image(input_image, G1, device, pil=False):
     target_pil = target_pil.crop(
         ((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2)
     )
-    target_pil = target_pil.resize(
-        (G1.img_resolution, G1.img_resolution), PIL.Image.LANCZOS
-    )
+    target_pil = target_pil.resize((res, res), PIL.Image.LANCZOS)
     target_uint8 = np.array(target_pil, dtype=np.uint8)
+    return target_uint8
+
+
+def project_image(input_image, G1, device, pil=False):
+    target_uint8 = get_target_transformed_img(input_image, G1.img_resolution, pil)
     target_torch = torch.tensor(target_uint8.transpose([2, 0, 1]), device=device)
 
     # since the project function returns all the w's, we only want the last one
-    w_plus = project(G1, target_torch, num_steps=500, device=device, verbose=True)
+    w_plus = project(G1, target_torch, num_steps=500, device=device, verbose=False)
     return w_plus
 
 
@@ -85,6 +89,39 @@ def generate_image(G, w_plus):
         normal_img.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
     )
     return PIL.Image.fromarray(normal_img, "RGB")
+
+
+def make_video(G1, blended_model, w_plus, target_uint8, outfile):
+
+    video = imageio.get_writer(
+        outfile, mode="I", fps=10, codec="libx264", bitrate="16M"
+    )
+    print(f"Saving optimization progress video {outfile}")
+    for projected_w in w_plus:
+        unblended_image = G1.synthesis(projected_w.unsqueeze(0), noise_mode="const")
+        unblended_image = (unblended_image + 1) * (255 / 2)
+        unblended_image = (
+            unblended_image.permute(0, 2, 3, 1)
+            .clamp(0, 255)
+            .to(torch.uint8)[0]
+            .cpu()
+            .numpy()
+        )
+        synth_image = blended_model.synthesis(
+            projected_w.unsqueeze(0), noise_mode="const"
+        )
+        synth_image = (synth_image + 1) * (255 / 2)
+        synth_image = (
+            synth_image.permute(0, 2, 3, 1)
+            .clamp(0, 255)
+            .to(torch.uint8)[0]
+            .cpu()
+            .numpy()
+        )
+        video.append_data(
+            np.concatenate([target_uint8, unblended_image, synth_image], axis=1)
+        )
+    video.close()
 
 
 @click.command()
@@ -181,35 +218,8 @@ def main(
     blended_img_pil = generate_image(blended_model, w_plus)
     blended_img_pil.save(f"{outdir}/{input_image_name}_blended{ext}")
 
-    video = imageio.get_writer(
-        f"{outdir}/proj_blended.mp4", mode="I", fps=10, codec="libx264", bitrate="16M"
-    )
-    print(f'Saving optimization progress video "{outdir}/proj_blended.mp4"')
-    for projected_w in w_plus:
-        unblended_image = G1.synthesis(projected_w.unsqueeze(0), noise_mode="const")
-        unblended_image = (unblended_image + 1) * (255 / 2)
-        unblended_image = (
-            unblended_image.permute(0, 2, 3, 1)
-            .clamp(0, 255)
-            .to(torch.uint8)[0]
-            .cpu()
-            .numpy()
-        )
-        synth_image = blended_model.synthesis(
-            projected_w.unsqueeze(0), noise_mode="const"
-        )
-        synth_image = (synth_image + 1) * (255 / 2)
-        synth_image = (
-            synth_image.permute(0, 2, 3, 1)
-            .clamp(0, 255)
-            .to(torch.uint8)[0]
-            .cpu()
-            .numpy()
-        )
-        video.append_data(
-            np.concatenate([target_uint8, unblended_image, synth_image], axis=1)
-        )
-    video.close()
+    target_uint8 = get_target_transformed_img(input_image, G1.img_resolution)
+    make_video(G1, blended_model, w_plus, target_uint8, f"{outdir}/proj_blended.mp4")
 
 
 if __name__ == "__main__":

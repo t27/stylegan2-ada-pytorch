@@ -1,7 +1,11 @@
 __pycache__/
 *.pyc
 .cache/
-out*
-pretrained
 .vscode
 **/.ipynb_checkpoints
+pretrained
+out*
+results
+checkpoints
+training_runs
+individuals
