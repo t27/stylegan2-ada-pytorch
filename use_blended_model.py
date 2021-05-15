@@ -57,6 +57,36 @@ def blend_model(
     return blended_model, G1
 
 
+def project_image(input_image, G1, device, pil=False):
+    if not pil:
+        target_pil = PIL.Image.open(input_image).convert("RGB")
+    else:
+        target_pil = input_image
+    w, h = target_pil.size
+    s = min(w, h)
+    target_pil = target_pil.crop(
+        ((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2)
+    )
+    target_pil = target_pil.resize(
+        (G1.img_resolution, G1.img_resolution), PIL.Image.LANCZOS
+    )
+    target_uint8 = np.array(target_pil, dtype=np.uint8)
+    target_torch = torch.tensor(target_uint8.transpose([2, 0, 1]), device=device)
+
+    # since the project function returns all the w's, we only want the last one
+    w_plus = project(G1, target_torch, num_steps=500, device=device, verbose=True)
+    return w_plus
+
+
+def generate_image(G, w_plus):
+    normal_img = G.synthesis(w_plus[-1].unsqueeze(0), noise_mode="const")
+    normal_img = (normal_img + 1) * (255 / 2)
+    normal_img = (
+        normal_img.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
+    )
+    return PIL.Image.fromarray(normal_img, "RGB")
+
+
 @click.command()
 @click.pass_context
 @click.option(
@@ -139,37 +169,16 @@ def main(
         network_size=network_size,
         blend_width=blend_width,
     )
-    target_pil = PIL.Image.open(input_image).convert("RGB")
-    w, h = target_pil.size
-    s = min(w, h)
-    target_pil = target_pil.crop(
-        ((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2)
-    )
-    target_pil = target_pil.resize(
-        (G1.img_resolution, G1.img_resolution), PIL.Image.LANCZOS
-    )
-    target_uint8 = np.array(target_pil, dtype=np.uint8)
-    target_torch = torch.tensor(target_uint8.transpose([2, 0, 1]), device=device)
 
-    # since the project function returns all the w's, we only want the last one
-    w_plus = project(G1, target_torch, num_steps=500, device=device, verbose=True)
+    w_plus = project_image(input_image, G1, device)
     np.savez(f"{outdir}/projected_w.npz", w=w_plus.unsqueeze(0).cpu().numpy())
+
     # generate and save the normal image
-    normal_img = G1.synthesis(w_plus[-1].unsqueeze(0), noise_mode="const")
-    normal_img = (normal_img + 1) * (255 / 2)
-    normal_img = (
-        normal_img.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
-    )
-    normal_img_pil = PIL.Image.fromarray(normal_img, "RGB")
+    normal_img_pil = generate_image(G1, w_plus)
     normal_img_pil.save(f"{outdir}/{input_image_name}_synthesized{ext}")
 
     # generate and save the blended image
-    blended_img = blended_model.synthesis(w_plus[-1].unsqueeze(0), noise_mode="const")
-    blended_img = (blended_img + 1) * (255 / 2)
-    blended_img = (
-        blended_img.permute(0, 2, 3, 1).clamp(0, 255).to(torch.uint8)[0].cpu().numpy()
-    )
-    blended_img_pil = PIL.Image.fromarray(blended_img, "RGB")
+    blended_img_pil = generate_image(blended_model, w_plus)
     blended_img_pil.save(f"{outdir}/{input_image_name}_blended{ext}")
 
     video = imageio.get_writer(
