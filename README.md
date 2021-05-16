@@ -6,6 +6,14 @@ This repository implements StyleGAN blending as proposed by [Justin Pinkney and 
 
 This project was done as part of a course we took at CMU - https://learning-image-synthesis.github.io/ in Spring 2021
 
+Project website available [here](https://www.andrew.cmu.edu/course/16-726/projects/tarangs/project/). ([backup](https://tarangshah.com/stylegan2-blending/))
+
+
+
+Demo Website - https://t27.pagekite.me/ 
+
+(this may be offline after May 31st due to GPU resource contraints) refer to https://www.youtube.com/watch?v=Urr-bbI10DQ for the video walkthrough.
+
 ## Contributions
 
 - We add a better projection routine for projecting natural images to the StyleGAN2 latent space(inspired from [Abdal et al](https://arxiv.org/abs/1904.03189))
@@ -36,19 +44,7 @@ In terms of hardware, we have tested our system on multiple NVIDIA GPUs includin
 1. `stylegan_blending.py` - This script includes blending operations and also includes helper functions to run some experiments on randomly generated seeds. If you provide a `projected_w` argument, we run the experiments on this provided latent space vector instead of generating random ones.  The main utility function in this is `get_blended_model` which is used in other files as well
 2. The projector updates are more internal, we can still continue using the projector.py as originally intended by NVIDIA in the original repo's documentation([preserved below](#projecting-images-to-latent-space))
 3. `use_blended_model.py` - This script includes the main function that takes an input image, 2 network pickles and a blending layer paramter and performs a latent space projection+simple blending+forward pass. The latent vector is also saved and can be used for other models.
-4. `web_demo.py` - This script provides a simple web demo built using [streamlit](streamlit.io). This allows a convenient way to have a web interface to upload images and try various combinations. A video walkthrough for the website is available here - {TBD}
-
-
-To be added soon
-- instructions for downloading checkpoints
-- sample commands for stylegan_blending and use_blended_model (you can refer to the `run_experiments` scripts, both `py` and `sh`. Also we use `click` for the args similar to the parent StyleGAN repo, which should provide some help if you run `python scripy.py -h`)
-- visual results and tips on hyperparameters
-
-
-
-
-
-
+4. `web_demo.py` - This script provides a simple web demo built using [streamlit](streamlit.io). This allows a convenient way to have a web interface to upload images and try various combinations. A video walkthrough for the website is linked in the introduction of this document.
 
 ------------------------------------------------------------
 ## StyleGAN2-ADA &mdash; Official PyTorch implementation
