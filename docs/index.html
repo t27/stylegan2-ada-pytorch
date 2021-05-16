@@ -1,0 +1,671 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"/><title>Blending StyleGAN2 models to turn faces into cats(and more)</title><style>
+/* webkit printing magic: print all background colors */
+html {
+	-webkit-print-color-adjust: exact;
+}
+* {
+	box-sizing: border-box;
+	-webkit-print-color-adjust: exact;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+}
+@media only screen {
+	body {
+		margin: 2em auto;
+		max-width: 900px;
+		color: rgb(55, 53, 47);
+	}
+}
+
+body {
+	line-height: 1.5;
+	white-space: pre-wrap;
+}
+
+a,
+a.visited {
+	color: inherit;
+	text-decoration: underline;
+}
+
+.pdf-relative-link-path {
+	font-size: 80%;
+	color: #444;
+}
+
+h1,
+h2,
+h3 {
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+	font-weight: 600;
+	margin-bottom: 0;
+}
+
+.page-title {
+	font-size: 2.5rem;
+	font-weight: 700;
+	margin-top: 0;
+	margin-bottom: 0.75em;
+}
+
+h1 {
+	font-size: 1.875rem;
+	margin-top: 1.875rem;
+}
+
+h2 {
+	font-size: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+h3 {
+	font-size: 1.25rem;
+	margin-top: 1.25rem;
+}
+
+.source {
+	border: 1px solid #ddd;
+	border-radius: 3px;
+	padding: 1.5em;
+	word-break: break-all;
+}
+
+.callout {
+	border-radius: 3px;
+	padding: 1rem;
+}
+
+figure {
+	margin: 1.25em 0;
+	page-break-inside: avoid;
+}
+
+figcaption {
+	opacity: 0.5;
+	font-size: 85%;
+	margin-top: 0.5em;
+}
+
+mark {
+	background-color: transparent;
+}
+
+.indented {
+	padding-left: 1.5em;
+}
+
+hr {
+	background: transparent;
+	display: block;
+	width: 100%;
+	height: 1px;
+	visibility: visible;
+	border: none;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.09);
+}
+
+img {
+	max-width: 100%;
+}
+
+@media only print {
+	img {
+		max-height: 100vh;
+		object-fit: contain;
+	}
+}
+
+@page {
+	margin: 1in;
+}
+
+.collection-content {
+	font-size: 0.875rem;
+}
+
+.column-list {
+	display: flex;
+	justify-content: space-between;
+}
+
+.column {
+	padding: 0 1em;
+}
+
+.column:first-child {
+	padding-left: 0;
+}
+
+.column:last-child {
+	padding-right: 0;
+}
+
+.table_of_contents-item {
+	display: block;
+	font-size: 0.875rem;
+	line-height: 1.3;
+	padding: 0.125rem;
+}
+
+.table_of_contents-indent-1 {
+	margin-left: 1.5rem;
+}
+
+.table_of_contents-indent-2 {
+	margin-left: 3rem;
+}
+
+.table_of_contents-indent-3 {
+	margin-left: 4.5rem;
+}
+
+.table_of_contents-link {
+	text-decoration: none;
+	opacity: 0.7;
+	border-bottom: 1px solid rgba(55, 53, 47, 0.18);
+}
+
+table,
+th,
+td {
+	border: 1px solid rgba(55, 53, 47, 0.09);
+	border-collapse: collapse;
+}
+
+table {
+	border-left: none;
+	border-right: none;
+}
+
+th,
+td {
+	font-weight: normal;
+	padding: 0.25em 0.5em;
+	line-height: 1.5;
+	min-height: 1.5em;
+	text-align: left;
+}
+
+th {
+	color: rgba(55, 53, 47, 0.6);
+}
+
+ol,
+ul {
+	margin: 0;
+	margin-block-start: 0.6em;
+	margin-block-end: 0.6em;
+}
+
+li > ol:first-child,
+li > ul:first-child {
+	margin-block-start: 0.6em;
+}
+
+ul > li {
+	list-style: disc;
+}
+
+ul.to-do-list {
+	text-indent: -1.7em;
+}
+
+ul.to-do-list > li {
+	list-style: none;
+}
+
+.to-do-children-checked {
+	text-decoration: line-through;
+	opacity: 0.375;
+}
+
+ul.toggle > li {
+	list-style: none;
+}
+
+ul {
+	padding-inline-start: 1.7em;
+}
+
+ul > li {
+	padding-left: 0.1em;
+}
+
+ol {
+	padding-inline-start: 1.6em;
+}
+
+ol > li {
+	padding-left: 0.2em;
+}
+
+.mono ol {
+	padding-inline-start: 2em;
+}
+
+.mono ol > li {
+	text-indent: -0.4em;
+}
+
+.toggle {
+	padding-inline-start: 0em;
+	list-style-type: none;
+}
+
+/* Indent toggle children */
+.toggle > li > details {
+	padding-left: 1.7em;
+}
+
+.toggle > li > details > summary {
+	margin-left: -1.1em;
+}
+
+.selected-value {
+	display: inline-block;
+	padding: 0 0.5em;
+	background: rgba(206, 205, 202, 0.5);
+	border-radius: 3px;
+	margin-right: 0.5em;
+	margin-top: 0.3em;
+	margin-bottom: 0.3em;
+	white-space: nowrap;
+}
+
+.collection-title {
+	display: inline-block;
+	margin-right: 1em;
+}
+
+time {
+	opacity: 0.5;
+}
+
+.icon {
+	display: inline-block;
+	max-width: 1.2em;
+	max-height: 1.2em;
+	text-decoration: none;
+	vertical-align: text-bottom;
+	margin-right: 0.5em;
+}
+
+img.icon {
+	border-radius: 3px;
+}
+
+.user-icon {
+	width: 1.5em;
+	height: 1.5em;
+	border-radius: 100%;
+	margin-right: 0.5rem;
+}
+
+.user-icon-inner {
+	font-size: 0.8em;
+}
+
+.text-icon {
+	border: 1px solid #000;
+	text-align: center;
+}
+
+.page-cover-image {
+	display: block;
+	object-fit: cover;
+	width: 100%;
+	height: 30vh;
+}
+
+.page-header-icon {
+	font-size: 3rem;
+	margin-bottom: 1rem;
+}
+
+.page-header-icon-with-cover {
+	margin-top: -0.72em;
+	margin-left: 0.07em;
+}
+
+.page-header-icon img {
+	border-radius: 3px;
+}
+
+.link-to-page {
+	margin: 1em 0;
+	padding: 0;
+	border: none;
+	font-weight: 500;
+}
+
+p > .user {
+	opacity: 0.5;
+}
+
+td > .user,
+td > time {
+	white-space: nowrap;
+}
+
+input[type="checkbox"] {
+	transform: scale(1.5);
+	margin-right: 0.6em;
+	vertical-align: middle;
+}
+
+p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
+.image {
+	border: none;
+	margin: 1.5em 0;
+	padding: 0;
+	border-radius: 0;
+	text-align: center;
+}
+
+.code,
+code {
+	background: rgba(135, 131, 120, 0.15);
+	border-radius: 3px;
+	padding: 0.2em 0.4em;
+	border-radius: 3px;
+	font-size: 85%;
+	tab-size: 2;
+}
+
+code {
+	color: #eb5757;
+}
+
+.code {
+	padding: 1.5em 1em;
+}
+
+.code-wrap {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+.code > code {
+	background: none;
+	padding: 0;
+	font-size: 100%;
+	color: inherit;
+}
+
+blockquote {
+	font-size: 1.25em;
+	margin: 1em 0;
+	padding-left: 1em;
+	border-left: 3px solid rgb(55, 53, 47);
+}
+
+.bookmark {
+	text-decoration: none;
+	max-height: 8em;
+	padding: 0;
+	display: flex;
+	width: 100%;
+	align-items: stretch;
+}
+
+.bookmark-title {
+	font-size: 0.85em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	height: 1.75em;
+	white-space: nowrap;
+}
+
+.bookmark-text {
+	display: flex;
+	flex-direction: column;
+}
+
+.bookmark-info {
+	flex: 4 1 180px;
+	padding: 12px 14px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+}
+
+.bookmark-image {
+	width: 33%;
+	flex: 1 1 180px;
+	display: block;
+	position: relative;
+	object-fit: cover;
+	border-radius: 1px;
+}
+
+.bookmark-description {
+	color: rgba(55, 53, 47, 0.6);
+	font-size: 0.75em;
+	overflow: hidden;
+	max-height: 4.5em;
+	word-break: break-word;
+}
+
+.bookmark-href {
+	font-size: 0.75em;
+	margin-top: 0.25em;
+}
+
+.sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"; }
+.code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+.serif { font-family: Lyon-Text, Georgia, YuMincho, "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Songti TC", "Songti SC", "SimSun", "Nanum Myeongjo", NanumMyeongjo, Batang, serif; }
+.mono { font-family: iawriter-mono, Nitti, Menlo, Courier, monospace; }
+.pdf .sans { font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol", 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC', 'Noto Sans CJK KR'; }
+
+.pdf .code { font-family: Source Code Pro, "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC', 'Noto Sans Mono CJK KR'; }
+
+.pdf .serif { font-family: PT Serif, Lyon-Text, Georgia, YuMincho, "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", "Songti TC", "Songti SC", "SimSun", "Nanum Myeongjo", NanumMyeongjo, Batang, serif, 'Twemoji', 'Noto Color Emoji', 'Noto Sans CJK SC', 'Noto Sans CJK KR'; }
+
+.pdf .mono { font-family: PT Mono, iawriter-mono, Nitti, Menlo, Courier, monospace, 'Twemoji', 'Noto Color Emoji', 'Noto Sans Mono CJK SC', 'Noto Sans Mono CJK KR'; }
+
+.highlight-default {
+}
+.highlight-gray {
+	color: rgb(155,154,151);
+}
+.highlight-brown {
+	color: rgb(100,71,58);
+}
+.highlight-orange {
+	color: rgb(217,115,13);
+}
+.highlight-yellow {
+	color: rgb(223,171,1);
+}
+.highlight-teal {
+	color: rgb(15,123,108);
+}
+.highlight-blue {
+	color: rgb(11,110,153);
+}
+.highlight-purple {
+	color: rgb(105,64,165);
+}
+.highlight-pink {
+	color: rgb(173,26,114);
+}
+.highlight-red {
+	color: rgb(224,62,62);
+}
+.highlight-gray_background {
+	background: rgb(235,236,237);
+}
+.highlight-brown_background {
+	background: rgb(233,229,227);
+}
+.highlight-orange_background {
+	background: rgb(250,235,221);
+}
+.highlight-yellow_background {
+	background: rgb(251,243,219);
+}
+.highlight-teal_background {
+	background: rgb(221,237,234);
+}
+.highlight-blue_background {
+	background: rgb(221,235,241);
+}
+.highlight-purple_background {
+	background: rgb(234,228,242);
+}
+.highlight-pink_background {
+	background: rgb(244,223,235);
+}
+.highlight-red_background {
+	background: rgb(251,228,228);
+}
+.block-color-default {
+	color: inherit;
+	fill: inherit;
+}
+.block-color-gray {
+	color: rgba(55, 53, 47, 0.6);
+	fill: rgba(55, 53, 47, 0.6);
+}
+.block-color-brown {
+	color: rgb(100,71,58);
+	fill: rgb(100,71,58);
+}
+.block-color-orange {
+	color: rgb(217,115,13);
+	fill: rgb(217,115,13);
+}
+.block-color-yellow {
+	color: rgb(223,171,1);
+	fill: rgb(223,171,1);
+}
+.block-color-teal {
+	color: rgb(15,123,108);
+	fill: rgb(15,123,108);
+}
+.block-color-blue {
+	color: rgb(11,110,153);
+	fill: rgb(11,110,153);
+}
+.block-color-purple {
+	color: rgb(105,64,165);
+	fill: rgb(105,64,165);
+}
+.block-color-pink {
+	color: rgb(173,26,114);
+	fill: rgb(173,26,114);
+}
+.block-color-red {
+	color: rgb(224,62,62);
+	fill: rgb(224,62,62);
+}
+.block-color-gray_background {
+	background: rgb(235,236,237);
+}
+.block-color-brown_background {
+	background: rgb(233,229,227);
+}
+.block-color-orange_background {
+	background: rgb(250,235,221);
+}
+.block-color-yellow_background {
+	background: rgb(251,243,219);
+}
+.block-color-teal_background {
+	background: rgb(221,237,234);
+}
+.block-color-blue_background {
+	background: rgb(221,235,241);
+}
+.block-color-purple_background {
+	background: rgb(234,228,242);
+}
+.block-color-pink_background {
+	background: rgb(244,223,235);
+}
+.block-color-red_background {
+	background: rgb(251,228,228);
+}
+.select-value-color-default { background-color: rgba(206,205,202,0.5); }
+.select-value-color-gray { background-color: rgba(155,154,151, 0.4); }
+.select-value-color-brown { background-color: rgba(140,46,0,0.2); }
+.select-value-color-orange { background-color: rgba(245,93,0,0.2); }
+.select-value-color-yellow { background-color: rgba(233,168,0,0.2); }
+.select-value-color-green { background-color: rgba(0,135,107,0.2); }
+.select-value-color-blue { background-color: rgba(0,120,223,0.2); }
+.select-value-color-purple { background-color: rgba(103,36,222,0.2); }
+.select-value-color-pink { background-color: rgba(221,0,129,0.2); }
+.select-value-color-red { background-color: rgba(255,0,26,0.2); }
+
+.checkbox {
+	display: inline-flex;
+	vertical-align: text-bottom;
+	width: 16;
+	height: 16;
+	background-size: 16px;
+	margin-left: 2px;
+	margin-right: 5px;
+}
+
+.checkbox-on {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20width%3D%2216%22%20height%3D%2216%22%20fill%3D%22%2358A9D7%22%2F%3E%0A%3Cpath%20d%3D%22M6.71429%2012.2852L14%204.9995L12.7143%203.71436L6.71429%209.71378L3.28571%206.2831L2%207.57092L6.71429%2012.2852Z%22%20fill%3D%22white%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+
+.checkbox-off {
+	background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg%20width%3D%2216%22%20height%3D%2216%22%20viewBox%3D%220%200%2016%2016%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%3Crect%20x%3D%220.75%22%20y%3D%220.75%22%20width%3D%2214.5%22%20height%3D%2214.5%22%20fill%3D%22white%22%20stroke%3D%22%2336352F%22%20stroke-width%3D%221.5%22%2F%3E%0A%3C%2Fsvg%3E");
+}
+	
+</style></head><body><article id="7e62df18-52c6-499a-9164-045d1a9fbb58" class="page serif"><header><h1 class="page-title">Blending StyleGAN2 models to turn faces into cats(and more)</h1></header><div class="page-body"><h2 id="e7702aab-e424-4d86-aa7b-8bf3a1b2f8ef" class="">Project Website for 16726 - Learning Based Image synthesis</h2><h2 id="d89c6841-fa04-478a-bba7-92c7244e71a6" class="">CMU Spring 2021 </h2><hr id="430d1ab7-6899-4a54-ac4b-6846cc132b04"/><div id="8bf61ddc-4d7b-4ac2-902e-8afecd0a243a" class="column-list"><div id="90349eba-745a-43b1-8548-993f4e078eea" style="width:50%" class="column"><h2 id="bdb4fc43-700b-4c8a-b946-571230823534" class="">Tarang Shah(tarangs)</h2></div><div id="32af9952-1a15-4158-9bb5-9158b96d4f22" style="width:49.99999999999999%" class="column"><h2 id="ed673224-83d5-44b1-bb3e-32e04f120919" class="">Rohan Rao(rgrao)</h2></div></div><hr id="fb4f66e6-7037-477a-a218-c079b6f188df"/><div id="974a4bf4-980d-4369-8daf-5f09227ddc13" class="column-list"><div id="a7623b0a-75db-4156-8f34-bc5747e50c39" style="width:50%" class="column"><figure id="8ccdcf0b-cca7-4d0f-90d1-21aabab332bb" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/image_(1).png"><img style="width:864px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/image_(1).png"/></a></figure><figure id="9f3ed361-271e-457b-bb84-bd7f041a5edb" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/Untitled.png"><img style="width:816px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/Untitled.png"/></a></figure><figure id="3793547a-733f-4401-97f0-b049851a8647" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/image_(6).png"><img style="width:864px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/image_(6).png"/></a></figure></div><div id="924d1442-7ef1-49b6-bc07-8ed9ff0d1fdb" style="width:50%" class="column"><figure id="af902f2e-8e35-40e1-8390-0e426369fbdc" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/image_(5).png"><img style="width:710px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/image_(5).png"/></a></figure><figure id="4504ffca-05bb-4288-b95b-89d4bde1a855" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/Untitled%201.png"><img style="width:816px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/Untitled%201.png"/></a></figure><figure id="8b4e6d6e-25ff-406e-b951-8905e386d423" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/image_(2).png"><img style="width:864px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/image_(2).png"/></a></figure></div></div><ul id="02ff5e3a-599a-4c6c-b403-132c5b6362a6" class="toggle"><li><details><summary><em><strong>TOC</strong></em></summary><nav id="53068d90-5983-495d-9fca-0486fec7c388" class="block-color-gray table_of_contents"><div class="table_of_contents-item table_of_contents-indent-0"><a class="table_of_contents-link" href="#e7702aab-e424-4d86-aa7b-8bf3a1b2f8ef">Project Website for 16726 - Learning Based Image synthesis</a></div><div class="table_of_contents-item table_of_contents-indent-0"><a class="table_of_contents-link" href="#d89c6841-fa04-478a-bba7-92c7244e71a6">CMU Spring 2021 </a></div><div class="table_of_contents-item table_of_contents-indent-0"><a class="table_of_contents-link" href="#bdb4fc43-700b-4c8a-b946-571230823534">Tarang Shah(tarangs)</a></div><div class="table_of_contents-item table_of_contents-indent-0"><a class="table_of_contents-link" href="#ed673224-83d5-44b1-bb3e-32e04f120919">Rohan Rao(rgrao)</a></div><div class="table_of_contents-item table_of_contents-indent-0"><a class="table_of_contents-link" href="#e0b4a1f1-9aac-4862-bd2e-bb1dc350a2a2">Goal of the project</a></div><div class="table_of_contents-item table_of_contents-indent-0"><a class="table_of_contents-link" href="#24c53eb1-23a4-4d39-92dd-a45fb349ff47">Projector upgrades to StyleGAN2</a></div><div class="table_of_contents-item table_of_contents-indent-0"><a class="table_of_contents-link" href="#0fcd8c90-21f2-4556-ade3-a280fcbd3598">Training StyleGAN2</a></div><div class="table_of_contents-item table_of_contents-indent-0"><a class="table_of_contents-link" href="#6f3db048-70ef-4b3b-9d24-9e97db9795b2">Inverting the Generator</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#274abd43-9326-4663-8cff-f267ba1226b8">Background</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#2a46d04f-9a69-4405-99de-dbf55aca1c71">The task</a></div><div class="table_of_contents-item table_of_contents-indent-0"><a class="table_of_contents-link" href="#d7e52115-c9b6-481b-a5ac-56eec14a29df">Model Blending using StyleGAN2</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#2366d5f9-ea6f-4cb7-867d-ead5825d6ad3">Background and Task Description</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#d2c24e6d-bf2b-4fee-9a7c-d0220bcad307">Blending Model Weights vs Latent Space Interpolation</a></div><div class="table_of_contents-item table_of_contents-indent-0"><a class="table_of_contents-link" href="#d73ac8c2-5929-4081-b334-49e7ee3e65c6">Experiments and Interesting Results</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#d4b23b96-ea6e-4dcc-bd4e-8d0de85185a2">Simple Blending Experiments (with random seeds)</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#94296d95-c250-4f55-a6a0-2afdfb427885">More Interesting Blending Experiments</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#ae786cad-b371-4096-9e05-65ce1d26f67c">High-level Procedure</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#3cc6749e-f3b7-42e5-aef1-a8ec7427e30c">Results on custom images</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#58452461-d84f-432a-b931-d56a2a6899a4">Github Repository</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#db1ee8ff-632d-40ab-b29e-bc5f8c7b5705">Demo Website</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#cf9486da-d117-450b-bdae-9510c730e68a">Applications</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#e2a4aea0-9639-4384-b714-b2f921d29e7f">Next Steps</a></div><div class="table_of_contents-item table_of_contents-indent-1"><a class="table_of_contents-link" href="#bb313e49-5eb9-48e1-8347-eb3683e24191">References</a></div></nav></details></li></ul><figure class="block-color-gray_background callout" style="white-space:pre-wrap;display:flex" id="7652523c-e730-41e1-9e73-00602f46d82e"><div style="font-size:1.5em"><span class="icon">🚀</span></div><div style="width:100%"><a href=""> </a><span style="border-bottom:0.05em solid"><em><mark class="highlight-blue"><a href="">Demo Website</a></mark></em></span></div></figure><h1 id="e0b4a1f1-9aac-4862-bd2e-bb1dc350a2a2" class="">Goal of the project</h1><ul id="1e7c0242-7cab-4a78-af1f-63e1560580a8" class="bulleted-list"><li>Our project looks at how we can make artistic edits to images through model blending.</li></ul><ul id="a760aadb-b98f-4b03-930a-22af7b73b53f" class="bulleted-list"><li>The models described here are StyleGAN2 models that include one pretrained model(Faces) and the others were trained using transfer learning on their respective datasets.</li></ul><ul id="2e10d884-3bee-4295-bd7e-a1d780f6cee2" class="bulleted-list"><li>We use this model to transfer characteristics from cats/dogs/cartoons/wild animals onto faces of the people we know 😉</li></ul><h1 id="24c53eb1-23a4-4d39-92dd-a45fb349ff47" class="">Projector upgrades to StyleGAN2</h1><p id="137f3452-55cb-4d72-a0e3-b76bda872fd0" class="">The original code uses a single weight vector using StyleGAN&#x27;s internal <code>mapping</code> network - <style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi></mrow><annotation encoding="application/x-tex">w</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span></span></span></span></span><span>﻿</span></span>. However, inspired from HW5, we modify this to use a collection of weight vectors instead - <style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><mo>+</mo></mrow><annotation encoding="application/x-tex">w+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.66666em;vertical-align:-0.08333em;"></span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="mord">+</span></span></span></span></span><span>﻿</span></span> (this is technically a latent &quot;tensor&quot; but we refer to it as a latent vector for brevity)</p><figure id="0dc9e7c3-20e9-4312-bdbd-959ec5bda668" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/Untitled%202.png"><img style="width:384px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/Untitled%202.png"/></a><figcaption>We can see the <code>mapping</code> network in the above image which maps a random vector z to the weight space</figcaption></figure><p id="4ed32fd5-beef-44a6-b183-ce8f854fd987" class="">We also tried adding a Mean Squared Error (MSE) loss, but we noted that this MSE loss was actually making the resulting images smoother and less photorealistic, which reduced the perceptual quality. We also tried varying the noise regularization parameter, but this too did not result in any significant changes in the generated outputs.</p><p id="b2edc505-e29e-47a0-a3a3-eb74603e80af" class="">In the future, we would like to add a feed-forward neural network to provide a quick one-shot initialization for the optimization.</p><h1 id="0fcd8c90-21f2-4556-ade3-a280fcbd3598" class="">Training StyleGAN2</h1><ol id="0886d86a-9776-40c3-96f0-4b9d332ba7f6" class="numbered-list" start="1"><li>Start with a Pretrained FFHQ based face generator model - Here we used the 256x256 version for faster experimentation (From NVIDIA). We also used the version with the latest ADA improvements, which allow us to train a StyleGAN model with significantly fewer images.</li></ol><ol id="e850d0d7-fc54-49a5-b368-f5a7419a780a" class="numbered-list" start="2"><li>Fine tuned the model on 4 datasets - AFHQ Cats, AFHQ Dogs, AFHQ Wild Animals and Google Cartoons</li></ol><figure id="b013228c-99d7-4129-9724-f17fa013d212" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/modelstrained.png"><img style="width:816px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/modelstrained.png"/></a></figure><h1 id="6f3db048-70ef-4b3b-9d24-9e97db9795b2" class="">Inverting the Generator</h1><h2 id="274abd43-9326-4663-8cff-f267ba1226b8" class="">Background</h2><p id="ae6a0509-5760-4775-8001-a13e5327be28" class="">The core idea here is to invert an image generator, particularly the StyleGAN2 generator. Before we get into details of the inversion and how we do it, lets first understand what the generator does.  An image generator usually takes a vector as input and generates an image. Essentially it is a black box which takes a vector and returns an image.</p><p id="6330fbda-dd10-450f-86eb-6a7409d0e586" class="">
+</p><blockquote id="d0e5688d-00a8-4f74-904a-1b0268c62516" class=""><em><mark class="highlight-yellow_background">Vector → [Generator] → Image</mark></em></blockquote><p id="db7dae10-30ca-4645-8d7c-42c8a08bbb69" class="">We can see the visualization of the generator model from our &quot;Vanilla GAN&quot; of <a href="https://learning-image-synthesis.github.io/assignments/hw3">Homework 3</a> below</p><figure id="130667df-7649-4c7d-b7f9-0b8dcb3f6470" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/Untitled%203.png"><img style="width:816px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/Untitled%203.png"/></a><figcaption>Generator from the Vanilla GAN </figcaption></figure><p id="fba74efe-ca3c-4e83-b6cb-870a51c97dc5" class="">Although we show the Generator from a simple GAN, it is possible to use any generator. For the purposes of this assignment, we use the very famous and popular <a href="https://github.com/NVlabs/stylegan2"><em>StyleGAN2</em></a><em> generator.</em></p><h2 id="2a46d04f-9a69-4405-99de-dbf55aca1c71" class="">The task</h2><p id="d80eb7a4-8132-4a38-8aa6-8bd6f19bc3b1" class="">Now that we have seen what a generator does, lets talk about our task. Our first task is to generate a vector from a given input image. This is literally the opposite of what the generator does 🙃.</p><p id="48fbd1c6-a927-433e-9a96-b73d2b2a494b" class="">The vector we want from a given image is also known as a latent vector, since it belongs to the &quot;latent space&quot; of the generator.</p><p id="647bf528-32c7-42c7-80c4-5e940bed9178" class=""><strong>Given an input image, the goal is to find a latent vector that produces the input image when we pass it through the generator.</strong></p><blockquote id="13deeaae-fe99-407c-bdcb-07232f8d30b1" class=""><em><mark class="highlight-yellow_background">Input Image → [ </mark></em><em><strong><mark class="highlight-yellow_background">??</mark></strong></em><em><mark class="highlight-yellow_background"> ] → Latent Vector → [Generator] → Generated Image</mark></em></blockquote><p id="d9b342a7-ca5a-4440-b3b1-34c1f370a318" class="">Our goal is to figure out the &quot;<strong>??</strong>&quot; in the above process, such that the Generated Image is as similar to the input image as possible. Since the process is the reverse of what the Generator does, we call this &quot;inverting&quot; the generator. </p><p id="86361e44-101a-472b-a051-6edaebfd0f76" class="">We use <span style="border-bottom:0.05em solid"><em>optimization techniques for achieving this inversion</em></span>. We don&#x27;t actually use a model to replace the &quot;??&quot; in the above image, but we use some math and optimization techniques to achieve the results we want.</p><p id="9c35d5b0-74f3-4048-90b6-131dc0509671" class=""><span style="border-bottom:0.05em solid">Steps followed</span></p><ol id="0e617a86-ff61-4b75-8629-bf2562bf2268" class="numbered-list" start="1"><li>We start with a random Latent Vector and then pass it through the Generator.</li></ol><ol id="898d3bae-67dc-44c4-a955-8acdcd704056" class="numbered-list" start="2"><li>The Generator is in <code>eval</code> mode so it is only use for a forward pass</li></ol><ol id="f0ebe906-d240-4fd0-871d-3c34860c79bc" class="numbered-list" start="3"><li>Since we want the resultant image from the Generator to be as close to the real image as possible, we need to build a loss function for the same<ol id="16da5b22-5456-4c5e-b333-ba344cc6ac81" class="numbered-list" start="1"><li>We use a combination of a simple Mean-Squared-Error loss and a Perceptual Loss to achieve this. This is a weighted combination as mentioned in <a href="https://arxiv.org/pdf/1609.03552.pdf">this paper</a><ol id="54136a41-8365-4b16-8cc1-879e9b2ef30e" class="numbered-list" start="1"><li><style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>M</mi><mi>e</mi><mi>t</mi><mi>r</mi><mi>i</mi><mi>c</mi><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>λ</mi><mo stretchy="false">)</mo><mo>×</mo><mi>m</mi><mi>s</mi><mi>e</mi><mi mathvariant="normal">_</mi><mi>l</mi><mi>o</mi><mi>s</mi><mi>s</mi><mo>+</mo><mi>λ</mi><mo>×</mo><mi>p</mi><mi>e</mi><mi>r</mi><mi>c</mi><mi>e</mi><mi>p</mi><mi>t</mi><mi>u</mi><mi>a</mi><mi>l</mi><mi mathvariant="normal">_</mi><mi>l</mi><mi>o</mi><mi>s</mi><mi>s</mi></mrow><annotation encoding="application/x-tex">Metric = (1-\lambda)\times mse\_loss + \lambda \times perceptual\_loss</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">M</span><span class="mord mathnormal">e</span><span class="mord mathnormal">t</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">i</span><span class="mord mathnormal">c</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal">λ</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.00444em;vertical-align:-0.31em;"></span><span class="mord mathnormal">m</span><span class="mord mathnormal">se</span><span class="mord" style="margin-right:0.02778em;">_</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">oss</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.77777em;vertical-align:-0.08333em;"></span><span class="mord mathnormal">λ</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">×</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.00444em;vertical-align:-0.31em;"></span><span class="mord mathnormal">p</span><span class="mord mathnormal">erce</span><span class="mord mathnormal">pt</span><span class="mord mathnormal">u</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord" style="margin-right:0.02778em;">_</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">oss</span></span></span></span></span><span>﻿</span></span> (here <style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi></mrow><annotation encoding="application/x-tex">\lambda</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.69444em;vertical-align:0em;"></span><span class="mord mathnormal">λ</span></span></span></span></span><span>﻿</span></span> is also called perceptual weight or <code>perc_wgt</code>)</li></ol><ol id="4432c58c-5aa4-49bc-8cb8-6119cb9d10c3" class="numbered-list" start="2"><li>The Perceptual Loss here is the &quot;Content Loss&quot; at <code>conv_4</code> of a VGG network, as described <a href="https://www.cv-foundation.org/openaccess/content_cvpr_2016/papers/Gatys_Image_Style_Transfer_CVPR_2016_paper.pdf">here</a></li></ol></li></ol><ol id="f88a9959-31ba-4e15-b76c-934cc564b163" class="numbered-list" start="2"><li>The loss is calculated between the resultant image and the input real image<ol id="5b2cfc11-1179-46ea-b1e9-e3f5f1322775" class="numbered-list" start="1"><li><style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>L</mi><mi>o</mi><mi>s</mi><mi>s</mi><mo>=</mo><msqrt><mrow><mo stretchy="false">[</mo><mi>M</mi><mi>e</mi><mi>t</mi><mi>r</mi><mi>i</mi><mi>c</mi><mo stretchy="false">(</mo><mi>R</mi><mi>e</mi><mi>a</mi><mi>l</mi><mi>I</mi><mi>m</mi><mi>a</mi><mi>g</mi><mi>e</mi><mo stretchy="false">)</mo><mo>−</mo><mi>M</mi><mi>e</mi><mi>t</mi><mi>r</mi><mi>i</mi><mi>c</mi><mo stretchy="false">(</mo><mi>G</mi><mi>e</mi><mi>n</mi><mi>e</mi><mi>r</mi><mi>a</mi><mi>t</mi><mi>e</mi><mi>d</mi><mi>I</mi><mi>m</mi><mi>a</mi><mi>g</mi><mi>e</mi><mo stretchy="false">)</mo><msup><mo stretchy="false">]</mo><mn>2</mn></msup></mrow></msqrt></mrow><annotation encoding="application/x-tex">Loss = \sqrt{[Metric(RealImage)-Metric(GeneratedImage)]^2}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.68333em;vertical-align:0em;"></span><span class="mord mathnormal">L</span><span class="mord mathnormal">oss</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.24em;vertical-align:-0.30499999999999994em;"></span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.935em;"><span class="svg-align" style="top:-3.2em;"><span class="pstrut" style="height:3.2em;"></span><span class="mord" style="padding-left:1em;"><span class="mopen">[</span><span class="mord mathnormal" style="margin-right:0.10903em;">M</span><span class="mord mathnormal">e</span><span class="mord mathnormal">t</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">i</span><span class="mord mathnormal">c</span><span class="mopen">(</span><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="mord mathnormal">e</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="mord mathnormal">ma</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">e</span><span class="mclose">)</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord mathnormal" style="margin-right:0.10903em;">M</span><span class="mord mathnormal">e</span><span class="mord mathnormal">t</span><span class="mord mathnormal" style="margin-right:0.02778em;">r</span><span class="mord mathnormal">i</span><span class="mord mathnormal">c</span><span class="mopen">(</span><span class="mord mathnormal">G</span><span class="mord mathnormal">e</span><span class="mord mathnormal">n</span><span class="mord mathnormal" style="margin-right:0.02778em;">er</span><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">e</span><span class="mord mathnormal">d</span><span class="mord mathnormal" style="margin-right:0.07847em;">I</span><span class="mord mathnormal">ma</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">e</span><span class="mclose">)</span><span class="mclose"><span class="mclose">]</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.740108em;"><span style="top:-2.9890000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span><span style="top:-2.8950000000000005em;"><span class="pstrut" style="height:3.2em;"></span><span class="hide-tail" style="min-width:1.02em;height:1.28em;"><svg width='400em' height='1.28em' viewBox='0 0 400000 1296' preserveAspectRatio='xMinYMin slice'><path d='M263,681c0.7,0,18,39.7,52,119
+c34,79.3,68.167,158.7,102.5,238c34.3,79.3,51.8,119.3,52.5,120
+c340,-704.7,510.7,-1060.3,512,-1067
+l0 -0
+c4.7,-7.3,11,-11,19,-11
+H40000v40H1012.3
+s-271.3,567,-271.3,567c-38.7,80.7,-84,175,-136,283c-52,108,-89.167,185.3,-111.5,232
+c-22.3,46.7,-33.8,70.3,-34.5,71c-4.7,4.7,-12.3,7,-23,7s-12,-1,-12,-1
+s-109,-253,-109,-253c-72.7,-168,-109.3,-252,-110,-252c-10.7,8,-22,16.7,-34,26
+c-22,17.3,-33.3,26,-34,26s-26,-26,-26,-26s76,-59,76,-59s76,-60,76,-60z
+M1001 80h400000v40h-400000z'/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.30499999999999994em;"><span></span></span></span></span></span></span></span></span></span><span>﻿</span></span></li></ol></li></ol></li></ol><ol id="0b0dc43a-8beb-4a86-8e24-11a8863ffcf0" class="numbered-list" start="4"><li>We use an ADAM optimizer on this loss to optimize the input Latent Vector (changing from the LBFGS optimizer in HW5)</li></ol><ol id="116a23b7-ff0d-4f96-86f0-cc7a103e2009" class="numbered-list" start="5"><li>Finally after about 500 iterations, we can use the resultant vector as an optimized vector</li></ol><h1 id="d7e52115-c9b6-481b-a5ac-56eec14a29df" class="">Model Blending using StyleGAN2</h1><h2 id="2366d5f9-ea6f-4cb7-867d-ead5825d6ad3" class="">Background and Task Description</h2><p id="d2b01d3d-6737-4458-aa99-a9ac5fc53992" class="">Here, we would like to blend two trained StyleGAN2 models together. The first model, called the base model, will be trained on a particular dataset, like FFHQ. We already have pre-trained FFHQ models available, thanks to NVIDIA. These models are then fine-tuned on specific datasets, like the AFHQ-Cats, AFHQ-Dogs, AFHQ-Wild Animals and Google Cartoons type of datasets.</p><p id="b5ecab08-9ca8-4a48-80a0-5d8275e46807" class="">We then use two trained models and swap out the corresponding layers using either binary or fractional blending techniques. This is described in the figure below.</p><figure id="e5b5846f-e5f4-4448-b351-482c474beee7" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/blending.png"><img style="width:960px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/blending.png"/></a></figure><p id="79ab2fbc-316c-4a93-b2b3-c2a91b29b4f9" class="">As shown above, we can create a model that uses some weights from the <mark class="highlight-teal">base model </mark>and some weights from the <mark class="highlight-purple">blended model </mark>and then use this to generate new and interesting results. Here we have two options - either switch between the two sets of weights abruptly, or use a fractional linear combination to smoothly transition between them.</p><p id="a83e1fa4-98fd-4b93-aee1-14db9673fd73" class="">When the blending layer is <em>B</em><em><strong>K</strong></em>, For each block above K, we do the below operation for each layer,</p><div id="fb804618-b769-4df1-8e4b-0a536a4917d7" class="column-list"><div id="c22ee623-cbdc-444a-a051-988d2a18cdaf" style="width:50%" class="column"><figure id="149c4bd2-5ee0-489d-a70e-83aefd1d707b" class="equation"><style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><div class="equation-container"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><msub><mi>L</mi><mi>M</mi></msub><mo>=</mo><mo stretchy="false">(</mo><mn>1</mn><mo>−</mo><mi>α</mi><mo stretchy="false">)</mo><msub><mi>L</mi><mi>A</mi></msub><mo>+</mo><mi>α</mi><msub><mi>L</mi><mi>B</mi></msub></mrow><annotation encoding="application/x-tex">L_M = (1-\alpha) L_A + \alpha L_B</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.10903em;">M</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="mclose">)</span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">A</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05017em;">B</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span></div></figure><p id="e10dcb4d-ced6-42bc-8973-33af8f34e3ef" class="">For the simple case, <strong><style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>α</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\alpha = 1</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:0.64444em;vertical-align:0em;"></span><span class="mord">1</span></span></span></span></span><span>﻿</span></span></strong><strong> </strong></p><p id="86ecdd92-9392-48c7-8afe-938185576838" class="">Alternatively, we also use a progressive <style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>α</mi></mrow><annotation encoding="application/x-tex">\alpha</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span></span></span></span></span><span>﻿</span></span> value,</p><figure id="9e2cd33b-ecad-4567-a1d7-c2a57e87ed7e" class="equation"><style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><div class="equation-container"><span class="katex-display"><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics><mrow><mi>α</mi><mo>=</mo><mfrac><mn>1</mn><mrow><mn>1</mn><mo>+</mo><msup><mi>e</mi><mrow><mo>−</mo><mi>m</mi><mi mathvariant="normal">/</mi><mi>q</mi></mrow></msup></mrow></mfrac></mrow><annotation encoding="application/x-tex"> \alpha = \frac{1}{1+e^{-m/q}}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.10877em;vertical-align:-0.78733em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.32144em;"><span style="top:-2.2960000000000003em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord"><span class="mord mathnormal">e</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.814em;"><span style="top:-2.989em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mathnormal mtight">m</span><span class="mord mtight">/</span><span class="mord mathnormal mtight" style="margin-right:0.03588em;">q</span></span></span></span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.677em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord">1</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.78733em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></div></figure><p id="bd464ff6-22de-40a8-9973-4eecc5ac29cd" class="">The main configurable parameter for the fractional <style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>α</mi></mrow><annotation encoding="application/x-tex">\alpha</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span></span></span></span></span><span>﻿</span></span> is the <strong>q</strong> value. <strong>We found the best results at q=0.7</strong></p></div><div id="a81e65fa-6509-4196-b1a4-03e1ded01eb6" style="width:50%" class="column"><p id="109936e4-bde9-4e9c-8c5e-8f897310bbc1" class="">Where,</p><p id="a9ad27bf-58bb-4bdd-95d3-e8d22bbe47cc" class=""><style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mi>M</mi></msub></mrow><annotation encoding="application/x-tex">L_M</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.10903em;">M</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span><span>﻿</span></span> = Weights of the resultant blended model</p><p id="5439acd5-f2af-4f53-b908-de39d3ded230" class=""><style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mi>A</mi></msub></mrow><annotation encoding="application/x-tex">L_A</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">A</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span><span>﻿</span></span> = Weights from the base model layer</p><p id="071eb928-c054-4c96-93e6-b472eddcb026" class=""><style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>L</mi><mi>B</mi></msub></mrow><annotation encoding="application/x-tex">L_B</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.83333em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathnormal">L</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.32833099999999993em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight" style="margin-right:0.05017em;">B</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span></span><span>﻿</span></span> = Weights from the second model layers</p><p id="a6a27b5a-478a-41ae-8a9c-e8818c10f9f9" class=""><style>@import url('https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.2/katex.min.css')</style><span data-token-index="0" contenteditable="false" class="notion-text-equation-token" style="user-select:all;-webkit-user-select:all;-moz-user-select:all"><span></span><span><span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>α</mi></mrow><annotation encoding="application/x-tex">\alpha</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathnormal" style="margin-right:0.0037em;">α</span></span></span></span></span><span>﻿</span></span> = Weight factor</p><p id="39c2f634-f6f3-45c2-a5d9-b37c4faab03e" class="">k = block after which we start blending</p><p id="0ffa1300-3e47-4085-8ade-bff5a1070e96" class="">m = the index of the block starting at 0 for the kth block(for example, if K is 8, B16 has m=1, B32 has m=2)</p><p id="ecba735f-1bd0-47c4-b681-d456777b7dc4" class="">q = Blend Width</p></div></div><p id="986fa155-ce56-48b7-a3e7-2f977b0b03b5" class="">
+</p><p id="82572be0-488f-42a7-bef8-0a45393abb35" class="">Note: the second model <strong>MUST BE </strong>transfer-learned from the base model, for best results. Here we show the difference with and without transfer learning:</p><figure id="0057383f-2727-43d7-9e08-05e7a4af35c9" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/transfer.png"><img style="width:1152px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/transfer.png"/></a></figure><p id="cc3c7c2a-0f6c-47a2-ad95-f7c7e7892054" class="">From this experiment, it seems that when models are transfer learned, many features in the early stage of the models are related. Hence when we blend or even swap layers across these models, we get to see interesting combinations.</p><p id="f57185a1-a3c3-4062-82d7-3c9323a7c545" class="">
+</p><h2 id="d2c24e6d-bf2b-4fee-9a7c-d0220bcad307" class="">Blending Model Weights vs Latent Space Interpolation</h2><div id="03d055f6-e5a3-4c45-aa82-b7f4c4e1b4a1" class="collection-content"><h4 class="collection-title">Latent Space v/s Blending Weights</h4><table class="collection-content"><thead><tr><th><span class="icon property-icon"><svg viewBox="0 0 14 14" style="width:14px;height:14px;display:block;fill:rgba(55, 53, 47, 0.4);flex-shrink:0;-webkit-backface-visibility:hidden" class="typesTitle"><path d="M7.73943662,8.6971831 C7.77640845,8.7834507 7.81338028,8.8943662 7.81338028,9.00528169 C7.81338028,9.49823944 7.40669014,9.89260563 6.91373239,9.89260563 C6.53169014,9.89260563 6.19894366,9.64612676 6.08802817,9.30105634 L5.75528169,8.33978873 L2.05809859,8.33978873 L1.72535211,9.30105634 C1.61443662,9.64612676 1.2693662,9.89260563 0.887323944,9.89260563 C0.394366197,9.89260563 0,9.49823944 0,9.00528169 C0,8.8943662 0.0246478873,8.7834507 0.0616197183,8.6971831 L2.46478873,2.48591549 C2.68661972,1.90669014 3.24119718,1.5 3.90669014,1.5 C4.55985915,1.5 5.12676056,1.90669014 5.34859155,2.48591549 L7.73943662,8.6971831 Z M2.60035211,6.82394366 L5.21302817,6.82394366 L3.90669014,3.10211268 L2.60035211,6.82394366 Z M11.3996479,3.70598592 C12.7552817,3.70598592 14,4.24823944 14,5.96126761 L14,9.07922535 C14,9.52288732 13.6549296,9.89260563 13.2112676,9.89260563 C12.8169014,9.89260563 12.471831,9.59683099 12.4225352,9.19014085 C12.028169,9.6584507 11.3257042,9.95422535 10.5492958,9.95422535 C9.60035211,9.95422535 8.47887324,9.31338028 8.47887324,7.98239437 C8.47887324,6.58978873 9.60035211,6.08450704 10.5492958,6.08450704 C11.3380282,6.08450704 12.040493,6.33098592 12.4348592,6.81161972 L12.4348592,5.98591549 C12.4348592,5.38204225 11.9172535,4.98767606 11.1285211,4.98767606 C10.6602113,4.98767606 10.2411972,5.11091549 9.80985915,5.38204225 C9.72359155,5.43133803 9.61267606,5.46830986 9.50176056,5.46830986 C9.18133803,5.46830986 8.91021127,5.1971831 8.91021127,4.86443662 C8.91021127,4.64260563 9.0334507,4.44542254 9.19366197,4.34683099 C9.87147887,3.90316901 10.6232394,3.70598592 11.3996479,3.70598592 Z M11.1778169,8.8943662 C11.6830986,8.8943662 12.1760563,8.72183099 12.4348592,8.37676056 L12.4348592,7.63732394 C12.1760563,7.29225352 11.6830986,7.11971831 11.1778169,7.11971831 C10.5616197,7.11971831 10.056338,7.45246479 10.056338,8.0193662 C10.056338,8.57394366 10.5616197,8.8943662 11.1778169,8.8943662 Z M0.65625,11.125 L13.34375,11.125 C13.7061869,11.125 14,11.4188131 14,11.78125 C14,12.1436869 13.7061869,12.4375 13.34375,12.4375 L0.65625,12.4375 C0.293813133,12.4375 4.43857149e-17,12.1436869 0,11.78125 C-4.43857149e-17,11.4188131 0.293813133,11.125 0.65625,11.125 Z"></path></svg></span>Name</th><th><span class="icon property-icon"><svg viewBox="0 0 14 14" style="width:14px;height:14px;display:block;fill:rgba(55, 53, 47, 0.4);flex-shrink:0;-webkit-backface-visibility:hidden" class="typesText"><path d="M7,4.56818 C7,4.29204 6.77614,4.06818 6.5,4.06818 L0.5,4.06818 C0.223858,4.06818 0,4.29204 0,4.56818 L0,5.61364 C0,5.88978 0.223858,6.11364 0.5,6.11364 L6.5,6.11364 C6.77614,6.11364 7,5.88978 7,5.61364 L7,4.56818 Z M0.5,1 C0.223858,1 0,1.223858 0,1.5 L0,2.54545 C0,2.8216 0.223858,3.04545 0.5,3.04545 L12.5,3.04545 C12.7761,3.04545 13,2.8216 13,2.54545 L13,1.5 C13,1.223858 12.7761,1 12.5,1 L0.5,1 Z M0,8.68182 C0,8.95796 0.223858,9.18182 0.5,9.18182 L11.5,9.18182 C11.7761,9.18182 12,8.95796 12,8.68182 L12,7.63636 C12,7.36022 11.7761,7.13636 11.5,7.13636 L0.5,7.13636 C0.223858,7.13636 0,7.36022 0,7.63636 L0,8.68182 Z M0,11.75 C0,12.0261 0.223858,12.25 0.5,12.25 L9.5,12.25 C9.77614,12.25 10,12.0261 10,11.75 L10,10.70455 C10,10.4284 9.77614,10.20455 9.5,10.20455 L0.5,10.20455 C0.223858,10.20455 0,10.4284 0,10.70455 L0,11.75 Z"></path></svg></span>Latent Space Interpolation</th><th><span class="icon property-icon"><svg viewBox="0 0 14 14" style="width:14px;height:14px;display:block;fill:rgba(55, 53, 47, 0.4);flex-shrink:0;-webkit-backface-visibility:hidden" class="typesText"><path d="M7,4.56818 C7,4.29204 6.77614,4.06818 6.5,4.06818 L0.5,4.06818 C0.223858,4.06818 0,4.29204 0,4.56818 L0,5.61364 C0,5.88978 0.223858,6.11364 0.5,6.11364 L6.5,6.11364 C6.77614,6.11364 7,5.88978 7,5.61364 L7,4.56818 Z M0.5,1 C0.223858,1 0,1.223858 0,1.5 L0,2.54545 C0,2.8216 0.223858,3.04545 0.5,3.04545 L12.5,3.04545 C12.7761,3.04545 13,2.8216 13,2.54545 L13,1.5 C13,1.223858 12.7761,1 12.5,1 L0.5,1 Z M0,8.68182 C0,8.95796 0.223858,9.18182 0.5,9.18182 L11.5,9.18182 C11.7761,9.18182 12,8.95796 12,8.68182 L12,7.63636 C12,7.36022 11.7761,7.13636 11.5,7.13636 L0.5,7.13636 C0.223858,7.13636 0,7.36022 0,7.63636 L0,8.68182 Z M0,11.75 C0,12.0261 0.223858,12.25 0.5,12.25 L9.5,12.25 C9.77614,12.25 10,12.0261 10,11.75 L10,10.70455 C10,10.4284 9.77614,10.20455 9.5,10.20455 L0.5,10.20455 C0.223858,10.20455 0,10.4284 0,10.70455 L0,11.75 Z"></path></svg></span>Blending Weights</th></tr></thead><tbody><tr id="7671d38c-f1dd-45ef-9a95-9d87a0794901"><td class="cell-title"><a href="https://www.notion.so/Type-of-Operation-7671d38cf1dd45ef9a959d87a0794901">Type of Operation</a></td><td class="cell-=;?b">Single model operation</td><td class="cell-n&lt;ey">Multiple models - Humans, Cats, Dogs, Wild Animals, Cartoons!</td></tr><tr id="49884a9c-7bdc-4d26-ba45-860cf3a2c9ad"><td class="cell-title"><a href="https://www.notion.so/Number-of-operations-49884a9c7bdc4d26ba45860cf3a2c9ad">Number of operations</a></td><td class="cell-=;?b">Allows for multiple operations within the same model</td><td class="cell-n&lt;ey">One time operation - blend the weights and save the weights</td></tr><tr id="01da3ecc-d89b-4b6b-b02e-8c9c75eaf332"><td class="cell-title"><a href="https://www.notion.so/Ease-of-usage-with-new-inputs-01da3eccd89b4b6bb02e8c9c75eaf332">Ease of usage with new inputs</a></td><td class="cell-=;?b">Need to find a latent vector for each input (requires optimization or forward pass through a CNN)</td><td class="cell-n&lt;ey">If we have the base model latent vectors, they do not need to be recalculated per-model</td></tr><tr id="2feb0f60-a229-4f84-a3fd-f12158fc55ea"><td class="cell-title"><a href="https://www.notion.so/How-it-works-2feb0f60a2294f84a3fdf12158fc55ea">How it works</a></td><td class="cell-=;?b">Need to tweak the latent vector to obtain the required styles</td><td class="cell-n&lt;ey">Easier to apply the same style on a variety of inputs</td></tr></tbody></table></div><h1 id="d73ac8c2-5929-4081-b334-49e7ee3e65c6" class="">Experiments and Interesting Results</h1><h2 id="d4b23b96-ea6e-4dcc-bd4e-8d0de85185a2" class="">Simple Blending Experiments (with random seeds)</h2><figure id="eefa8a54-4d71-44e7-a437-73d8b98c579e" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/simpleblend.png"><img style="width:1152px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/simpleblend.png"/></a></figure><p id="6e054d6c-0089-49a8-9470-6c1e6626e304" class="">In the first row we can see we have the Dog generator as the base model and the face generator as the blended model. As we blend at higher and higher layers, we see less of the blended model(faces). </p><p id="d85daf98-d165-4c4f-bb7e-bbe472945dbc" class="">We also see some interesting things happening here:</p><ol id="793f917b-cb8b-4592-aba9-a1b267d91a2b" class="numbered-list" start="1"><li>The first row B4 column shows that the FFHQ network used the corresponding latent vector to generate a person who has a very similar face pose, background and angle.</li></ol><ol id="cd8b1ead-2457-4add-9c86-eb9a12416aae" class="numbered-list" start="2"><li>For the rest of the rows, B16 and B32 generate the most exciting blends that form the &quot;uncanny valley&quot; between the human faces and cat faces.</li></ol><h2 id="94296d95-c250-4f55-a6a0-2afdfb427885" class="">More Interesting Blending Experiments</h2><figure id="704bce19-9c01-4829-8b46-a9225ca21ebb" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/expts.png"><img style="width:1152px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/expts.png"/></a></figure><p id="fc2a31e6-332d-44c7-9bc2-35c2f3e1477e" class="">The middle section includes the best layer. Between B16 and B64, we clearly see that its a mix of the 2 models, but the cuteness is still preserved 😍</p><h2 id="ae786cad-b371-4096-9e05-65ce1d26f67c" class="">High-level Procedure</h2><figure id="1cffa0be-c3d0-44ba-a778-dcd7dbab0e30" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/process.png"><img style="width:1152px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/process.png"/></a></figure><h2 id="3cc6749e-f3b7-42e5-aef1-a8ec7427e30c" class="">Results on custom images</h2><figure id="2e216333-c514-4eef-b1eb-d203535b79be"><div class="source"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/ezgif.com-gif-maker.webm">https://s3-us-west-2.amazonaws.com/secure.notion-static.com/af9f59b7-d905-4c0c-a567-7eba8df60234/ezgif.com-gif-maker.webm</a></div><figcaption>We see a sequence of progressive optimization on the latent vector. In each group of threes images above, the first image is the original image. The Second is the synthesized image, the third image is the blended image</figcaption></figure><p id="06b11367-21c3-4da0-972d-54e22caeef3c" class="">
+</p><figure id="511bfda0-9fec-4be4-80b2-f3322ef6d90f" class="image"><a href="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/Untitled%204.png"><img style="width:816px" src="Blending%20StyleGAN2%20models%20to%20turn%20faces%20into%20cats(%208ccdcf0bcca74d0f90d121aabab332bb/Untitled%204.png"/></a><figcaption>We show results of blending Cat models onto Face models at different levels. Column 1 is the original Generator output. Column 2 is B4, Column 3 is B8 and so on.</figcaption></figure><h2 id="58452461-d84f-432a-b931-d56a2a6899a4" class="">Github Repository</h2><blockquote id="86eb9954-dff8-4629-88fe-c871d5eef71b" class="">The code for this repository is available here - <a href="https://github.com/t27/stylegan2-blending">https://github.com/t27/stylegan2-blending</a></blockquote><p id="a7dbd87d-b3a3-4458-aff2-b5e37392c9c0" class="">We started from the base StyleGAN2 ADA - Pytorch repository and made various changes including improving the existing code and also adding our own code. </p><p id="657f7e8c-966c-4998-b456-dacd36a3703e" class="">Links to our pretrained models and instructions to set up and run our code are also provided in the README of the repository.</p><p id="ce886ac2-8f5d-4b43-ba88-b3afcd89c1fb" class="">We also include the source code for the webapp demo described below.</p><h2 id="db1ee8ff-632d-40ab-b29e-bc5f8c7b5705" class="">Demo Website</h2><p id="aa022ae4-0005-4f90-836f-8782c75e40ea" class="">We have a demo website for this project available. We used the <a href="https://streamlit.io/">Streamlit</a> library to develop the website. </p><blockquote id="fce0689a-abf5-4051-a5ec-c7cdb82b0e89" class="">The demo website is available here <a href="https://t27.pagekite.me/">https://t27.pagekite.me/</a></blockquote><p id="6aca2d23-186f-42e4-8618-7602ea2ce8e9" class="">Since the website runs on our local machine, we aim to keep it live upto 25th May. </p><p id="aa56606d-283e-41ad-af46-109b2b88884b" class="">Here is a video walkthrough of the website - <a href="https://youtube.com/watch?v=Urr-bbI10DQ">https://youtube.com/watch?v=Urr-bbI10DQ</a></p><figure id="ca6716a3-0c30-42ac-ab6c-f778e298b858"><div class="source"><a href="https://youtube.com/watch?v=Urr-bbI10DQ">https://youtube.com/watch?v=Urr-bbI10DQ</a></div></figure><p id="0cc5b376-e3b9-43f0-8ed2-cbf9541fc668" class=""><em>Note for the instructors and TAs, if there are any issues or problems with the website, please do contact us and we will try our best to fix and ensure the link is up and running.</em></p><h2 id="cf9486da-d117-450b-bdae-9510c730e68a" class="">Applications</h2><ul id="eb095dc2-231b-4126-832b-896dfe8bb1e7" class="bulleted-list"><li>Can be used for sim2real transfer - allow us to preserve specific features from different spaces (low/high level, depending on the blend layers)</li></ul><ul id="ea823ec3-4fe7-4ef2-bcd8-2821339888c5" class="bulleted-list"><li>Can be used for artistic applications, including generation of caricatures, realistic (uncanny) avatars for games, and Animoji (Apple)</li></ul><h2 id="e2a4aea0-9639-4384-b714-b2f921d29e7f" class="">Next Steps</h2><ul id="175c7d32-81b3-49a4-94aa-4657af09835c" class="bulleted-list"><li>More experiments on fractional blending - To explore how much of a control we can have on the blending results and if it is possible to edit finer features in the output images</li></ul><ul id="9970c3f7-60ef-496f-bc2b-8b655ef87109" class="bulleted-list"><li>Exploring newer creative results - Interleaved or randomized blending instead of sequential blending after a Kth block</li></ul><ul id="26265202-3703-4df1-a11e-110990905155" class="bulleted-list"><li>Using a feed forward network for the Latent space projection so that the Image to Image style transfer can be done in a single pass</li></ul><ul id="8fa945c9-2d07-4bb9-914c-cc6ad3c99d32" class="bulleted-list"><li>Combining Latent Space editing and Weight blending for building more creative tools for inspiring artists</li></ul><h2 id="bb313e49-5eb9-48e1-8347-eb3683e24191" class="">References</h2><ul id="aeafda52-0df1-4686-9c72-c00ba4666fbc" class="bulleted-list"><li><strong>Karras et. al</strong>, <em>Analyzing and Improving the Image Quality of StyleGAN</em></li></ul><ul id="48724a01-0e51-48b4-b9c5-f295713a2663" class="bulleted-list"><li><strong>Pinkney et. al</strong>, <em>Resolution Dependent GAN Interpolation for Controllable Image Synthesis Between Domains</em></li></ul><ul id="766bb25d-aa83-4682-a34b-d1820c83dae0" class="bulleted-list"><li><strong>Abdal et. al</strong>, <em>Image2StyleGAN: How to Embed Images Into the StyleGAN Latent Space?</em></li></ul><ul id="734f6599-3ef4-40a3-8f47-03be4b9dad28" class="bulleted-list"><li><a href="https://www.justinpinkney.com/stylegan-network-blending/">https://www.justinpinkney.com/stylegan-network-blending/</a></li></ul><p id="7eca9c1f-0777-4f84-a821-13505f22720f" class="">
+</p>
+</div>
+</article>
+<script>
+	var videos = document.getElementsByClassName("source");
+	for (var i = 0; i < videos.length; i++) {
+		var source = videos[i].getElementsByTagName("a");
+		if (source[0].href.includes("youtube")) {
+			var videoObject = document.createElement('iframe');
+			videoObject.src = source[0].href.replace("watch?v=", "embed/");
+			videos[i].style.padding = "0";
+			videoObject.style.width = "100%";
+			videoObject.style.height = "520px";
+			videoObject.setAttribute("allowfullscreen","true");
+			videos[i].append(videoObject);
+			source[0].remove();
+		} else {
+			var videoObject = document.createElement('video');
+			videos[i].style.padding = "0";
+			videoObject.src = source[0].href;
+			videoObject.controls = true;
+			videoObject.style.width = "100%";
+			videos[i].append(videoObject);
+			source[0].remove();
+		}
+	}
+</script>
+</body>
+
+</html>
