@@ -9,8 +9,8 @@ import shutil
 import subprocess
 
 ### RISKY!, but solves the problem for tomorrow's demo
-# subprocess.check_call(
-#     "find streamlit_temp -mmin +120 -delete"
+# os.system(
+#     "find `realpath streamlit_temp` -mmin +120 -delete"
 # )  # delete all files in the session older than the past two hours
 
 
@@ -106,7 +106,7 @@ _Hello_, your session id is `{session_id}`.
 > The first time you load an image, it will take about a minute to do some configurations, 
 > after that you can choose between different Blend Levels and Models and see the results. You can also choose different models
 
-Note: All images are deleted 1 hour after you open this webpage
+Note: All images are deleted after you close the tab, cached data cleared 2 hours after you open this webpage
 
 
 ------------
@@ -201,4 +201,4 @@ if st.button("See Video"):
     st.video(video_bytes)
 
 
-"Project source available at https://github.com/t27/stylegan-blending"
+"Project source available at https://github.com/t27/stylegan2-blending"
