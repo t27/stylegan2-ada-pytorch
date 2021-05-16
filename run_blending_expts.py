@@ -4,12 +4,12 @@ import os
 from tqdm import tqdm
 
 images = [
-    "individual/rohan.jpg",
-    "individual/tarang.png",
-    "individual/viraj.jpg",
-    "individual/junyan.jpg",
-    "individual/yufei.jpg",
-    "individual/sanil.jpg",
+    "individuals/rohan.jpg",
+    "individuals/tarang.png",
+    "individuals/viraj.jpg",
+    "individuals/junyan.jpg",
+    "individuals/yufei.jpg",
+    "individuals/sanil.jpg",
 ]
 networks = [
     "checkpoints/ffhq_chkpt_256.pkl",
@@ -31,8 +31,8 @@ for img in images:
         for N2 in networks:
             if N1 != N2:
                 imgname = os.path.splitext(os.path.split(img)[-1])[0]
-                fromname = N1.split("-")[1]
-                toname = N2.split("-")[1]
+                fromname = N1.split("_")[1]
+                toname = N2.split("_")[1]
                 cmd = "python use_blended_model.py --network1 " + N1
                 cmd += " --network2 " + N2
                 cmd += " --input_image " + img

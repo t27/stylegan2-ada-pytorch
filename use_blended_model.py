@@ -57,6 +57,45 @@ def blend_model(
     return blended_model, G1
 
 
+def blend_model_simple(
+    network1: torch.nn.Module,
+    network2: torch.nn.Module,
+    resolution: int = 16,
+    network_size: int = 512,
+    blend_width: float = None,
+    verbose: bool = False,
+):
+    """Generate images using pretrained network pickle.
+
+    Examples:
+    # Generate curated MetFaces images without truncation (Fig.10 left)
+    python generate.py --outdir=out --trunc=1 --seeds=85,265,297,849 \\
+        --network=https://nvlabs-fi-cdn.nvidia.com/stylegan2-ada-pytorch/pretrained/metfaces.pkl
+    """
+
+    # print(f"Loading networks from {network_pkl1} and {network_pkl2} ...")
+    device = torch.device("cuda")
+    # with dnnlib.util.open_url(network_pkl1) as f:
+    #     G1 = legacy.load_network_pkl(f)["G_ema"].to(device).eval()  # type: ignore
+    # with dnnlib.util.open_url(network_pkl2) as f:
+    #     G2 = legacy.load_network_pkl(f)["G_ema"].to(device).eval()  # type: ignore
+    # None = hard switch, float = smooth switch (logistic) with given width
+    blend_width = None
+    level = 0
+    resolution = f"b{resolution}"  # blend at layer
+
+    blended_model = get_blended_model(
+        network1,
+        network2,
+        resolution,
+        level,
+        blend_width,
+        network_size=network_size,
+        verbose=verbose,
+    )
+    return blended_model, network1
+
+
 def get_target_transformed_img(input_image, res=256, pil=False):
 
     if not pil:

@@ -13,12 +13,34 @@ This project was done as part of a course we took at CMU - https://learning-imag
 - We also add a "forward" pass implementation which takes an input image, projects it to the latent space and runs it through the blended model(`use_blended_model.py`).
 - We provide models trained on [AFHQCATs, AFHQDOGs, AFHQWILD](https://github.com/clovaai/stargan-v2#animal-faces-hq-dataset-afhq) and [Google Cartoon](https://google.github.io/cartoonset/). These models are trained at 256x256 using transfer learning from the base FFHQ 256x256 model provided originally by NVIDIA
 
-## Intructions and Documentation
+## Getting Started
 
-To set up the python environment and dependencies for this, follow the StyleGAN2 instructions below. 
+To set up the python environment and dependencies for this, first [follow the StyleGAN2 instructions from the original Readme below](#requirements). Almost all of the code below was tested on Ubuntu 20.04 and that is the recommended platform. MacOS is not supported due to lack of CUDA support. Windows support is not guaranteed, though it may work with a few changes to our code as the base StyleGAN2 repository does support Windows.
+
+In terms of hardware, we have tested our system on multiple NVIDIA GPUs including 1060, 2060 and 1080TIs. CUDA 11 is required.
+
+1. [Download the checkpoints](https://drive.google.com/file/d/136nwMZtF0kesDf_uNSqQLIqhjCaGy8nr/view?usp=sharing) and extract them to `checkpoints` in the root directory
+    ```
+    pip install gdown
+    gdown --id 136nwMZtF0kesDf_uNSqQLIqhjCaGy8nr
+    unzip checkpoints.zip
+    ```
+2. For running the streamlit web app, run `streamlit run web_demo.py`
+3. The improvements to the projection are available in the `projector.py`. The original NVIDIA project function is available as `project_orig` i n that file as backup.
+4. The core blending code is available in `stylegan_blending.py`. 
+5. The usage of the projection and blending functions is available in `use_blended_model.py`. This file also serves as an example of how to use the main contributions of this repository
+6. Sample commands to run multiple experiments are available in `run_blending_experiments.py`, `run_experiments.sh`, `run_experiments_partial_blend.sh` and `run_experiments_individual.sh`
+
+## Details
+
+1. `stylegan_blending.py` - This script includes blending operations and also includes helper functions to run some experiments on randomly generated seeds. If you provide a `projected_w` argument, we run the experiments on this provided latent space vector instead of generating random ones.  The main utility function in this is `get_blended_model` which is used in other files as well
+2. The projector updates are more internal, we can still continue using the projector.py as originally intended by NVIDIA in the original repo's documentation([preserved below](#projecting-images-to-latent-space))
+3. `use_blended_model.py` - This script includes the main function that takes an input image, 2 network pickles and a blending layer paramter and performs a latent space projection+simple blending+forward pass. The latent vector is also saved and can be used for other models.
+4. `web_demo.py` - This script provides a simple web demo built using [streamlit](streamlit.io). This allows a convenient way to have a web interface to upload images and try various combinations. A video walkthrough for the website is available here - {TBD}
+
 
 To be added soon
-- instructions for downloading ipynb_checkpoints
+- instructions for downloading checkpoints
 - sample commands for stylegan_blending and use_blended_model (you can refer to the `run_experiments` scripts, both `py` and `sh`. Also we use `click` for the args similar to the parent StyleGAN repo, which should provide some help if you run `python scripy.py -h`)
 - visual results and tips on hyperparameters
 
